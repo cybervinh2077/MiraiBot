@@ -25,4 +25,5 @@ jobs:
         run: npm install
 
       - name: Check syntax
-        run: node --check src/index.js src/events/*.js src/commands/*.js
+        run: |
+          find src -name "*.js" | xargs node --check
