@@ -164,9 +164,16 @@ async function playSong(queue, song) {
       noPlaylist: true,
     });
 
-    // yt-dlp-exec có thể trả về string hoặc object
-    const audioUrl = typeof output === 'string' ? output.trim() : output.stdout?.trim() ?? String(output).trim();
+    // yt-dlp-exec trả về string hoặc object tùy version
+    let audioUrl;
+    if (typeof output === 'string') {
+      audioUrl = output.trim();
+    } else if (output && typeof output === 'object') {
+      audioUrl = (output.stdout || output.url || Object.values(output)[0] || '').toString().trim();
+    }
     console.log('Audio URL type:', typeof output, '| URL:', audioUrl?.slice(0, 80));
+
+    if (!audioUrl) throw new Error('Could not extract audio URL');
 
     const ffmpeg = spawn(ffmpegPath, [
       '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
