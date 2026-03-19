@@ -9,7 +9,19 @@ const {
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { exec } = require('yt-dlp-exec');
 const { spawn } = require('child_process');
-const ffmpegPath = require('ffmpeg-static');
+
+// Ưu tiên system ffmpeg (cần thiết trên ARM như Orange Pi)
+// Fallback sang ffmpeg-static nếu không có system ffmpeg
+let ffmpegPath;
+try {
+  const { execSync } = require('child_process');
+  execSync('ffmpeg -version', { stdio: 'ignore' });
+  ffmpegPath = 'ffmpeg';
+  console.log('Using system ffmpeg');
+} catch {
+  ffmpegPath = require('ffmpeg-static');
+  console.log('Using ffmpeg-static:', ffmpegPath);
+}
 
 const YT_API_KEY = process.env.YOUTUBE_API_KEY;
 const YT_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
@@ -151,6 +163,28 @@ function buildPlayerUI(song, paused = false) {
   return { embeds: [embed], components: [row, row2] };
 }
 
+async function getAudioUrl(songUrl) {
+  // Dùng dump-json để lấy URL đáng tin cậy nhất
+  const info = await exec(songUrl, {
+    dumpSingleJson: true,
+    noPlaylist: true,
+    format: 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
+  });
+
+  // info là object JSON từ yt-dlp
+  if (info && typeof info === 'object') {
+    // Lấy URL từ format đã chọn
+    if (info.url) return info.url;
+    // Fallback: lấy từ formats array
+    if (info.formats?.length) {
+      const fmt = info.formats.slice().reverse().find(f => f.url && f.acodec !== 'none');
+      if (fmt?.url) return fmt.url;
+    }
+  }
+
+  throw new Error('Cannot extract audio URL from yt-dlp output');
+}
+
 async function playSong(queue, song) {
   if (!song) { startIdleTimer(queue); return; }
 
@@ -158,28 +192,33 @@ async function playSong(queue, song) {
   clearIdleTimer(queue);
 
   try {
-    const output = await exec(song.url, {
-      format: 'bestaudio[ext=webm]/bestaudio/best',
-      getUrl: true,
-      noPlaylist: true,
-    });
-
-    // yt-dlp-exec trả về string hoặc object tùy version
-    let audioUrl;
-    if (typeof output === 'string') {
-      audioUrl = output.trim();
-    } else if (output && typeof output === 'object') {
-      audioUrl = (output.stdout || output.url || Object.values(output)[0] || '').toString().trim();
-    }
-    console.log('Audio URL type:', typeof output, '| URL:', audioUrl?.slice(0, 80));
-
-    if (!audioUrl) throw new Error('Could not extract audio URL');
+    const audioUrl = await getAudioUrl(song.url);
+    console.log('Audio URL:', audioUrl?.slice(0, 80));
 
     const ffmpeg = spawn(ffmpegPath, [
-      '-reconnect', '1', '-reconnect_streamed', '1', '-reconnect_delay_max', '5',
-      '-i', audioUrl, '-vn', '-acodec', 'libopus', '-f', 'opus',
-      '-ar', '48000', '-ac', '2', 'pipe:1',
-    ], { stdio: ['ignore', 'pipe', 'ignore'] });
+      '-reconnect', '1',
+      '-reconnect_streamed', '1',
+      '-reconnect_delay_max', '5',
+      '-i', audioUrl,
+      '-vn',
+      '-acodec', 'libopus',
+      '-f', 'opus',
+      '-ar', '48000',
+      '-ac', '2',
+      'pipe:1',
+    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+
+    // Log ffmpeg stderr để debug
+    ffmpeg.stderr.on('data', (d) => {
+      const msg = d.toString();
+      if (msg.includes('Error') || msg.includes('error')) {
+        console.error('ffmpeg stderr:', msg.slice(0, 200));
+      }
+    });
+
+    ffmpeg.on('error', (err) => {
+      console.error('ffmpeg spawn error:', err.message);
+    });
 
     const resource = createAudioResource(ffmpeg.stdout, { inlineVolume: true });
     resource.volume?.setVolume(queue.volume);
@@ -193,7 +232,7 @@ async function playSong(queue, song) {
 
     queue.playerMessage = await queue.textChannel.send(buildPlayerUI(song));
   } catch (err) {
-    console.error('Play error:', err);
+    console.error('Play error:', err.message);
     await queue.textChannel.send(`❌ Lỗi khi phát **${song.title}**, bỏ qua...`);
     playNext(queue);
   }
