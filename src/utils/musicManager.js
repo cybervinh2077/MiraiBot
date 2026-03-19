@@ -164,23 +164,51 @@ function buildPlayerUI(song, paused = false) {
 }
 
 async function getAudioUrl(songUrl) {
-  // Dùng dump-json để lấy URL đáng tin cậy nhất
   const info = await exec(songUrl, {
     dumpSingleJson: true,
     noPlaylist: true,
     format: 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
   });
 
-  // info là object JSON từ yt-dlp
+  // Debug: log keys để biết structure
   if (info && typeof info === 'object') {
-    // Lấy URL từ format đã chọn
+    const keys = Object.keys(info);
+    console.log('yt-dlp info keys:', keys.slice(0, 15).join(', '));
+
+    // Thử các field phổ biến
     if (info.url) return info.url;
-    // Fallback: lấy từ formats array
-    if (info.formats?.length) {
-      const fmt = info.formats.slice().reverse().find(f => f.url && f.acodec !== 'none');
-      if (fmt?.url) return fmt.url;
+    if (info.webpage_url && info.formats?.length) {
+      // Ưu tiên audio-only formats
+      const audioFmts = info.formats.filter(f => f.url && f.vcodec === 'none' && f.acodec !== 'none');
+      if (audioFmts.length) return audioFmts[audioFmts.length - 1].url;
+      // Fallback bất kỳ format có URL
+      const anyFmt = info.formats.slice().reverse().find(f => f.url);
+      if (anyFmt) return anyFmt.url;
     }
+    // Nếu info chính là format object (có url trực tiếp)
+    if (info.manifest_url) return info.manifest_url;
   }
+
+  // Fallback: dùng getUrl (trả về string URL trực tiếp)
+  console.log('Falling back to getUrl method...');
+  const urlOutput = await exec(songUrl, {
+    format: 'bestaudio/best',
+    getUrl: true,
+    noPlaylist: true,
+  });
+
+  let audioUrl;
+  if (typeof urlOutput === 'string') {
+    audioUrl = urlOutput.trim().split('\n')[0];
+  } else if (urlOutput?.stdout) {
+    audioUrl = urlOutput.stdout.trim().split('\n')[0];
+  } else if (urlOutput && typeof urlOutput === 'object') {
+    // Log toàn bộ để debug
+    console.log('getUrl output:', JSON.stringify(urlOutput).slice(0, 300));
+    audioUrl = Object.values(urlOutput).find(v => typeof v === 'string' && v.startsWith('http'));
+  }
+
+  if (audioUrl?.startsWith('http')) return audioUrl;
 
   throw new Error('Cannot extract audio URL from yt-dlp output');
 }
