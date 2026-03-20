@@ -164,51 +164,53 @@ function buildPlayerUI(song, paused = false) {
 }
 
 async function getAudioUrl(songUrl) {
-  const info = await exec(songUrl, {
-    dumpSingleJson: true,
-    noPlaylist: true,
-    format: 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
-  });
+  let info;
+  try {
+    info = await exec(songUrl, {
+      dumpSingleJson: true,
+      noPlaylist: true,
+      format: 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
+      noCheckCertificates: true,
+      noWarnings: true,
+      preferFreeFormats: true,
+      addHeaders: ['referer:youtube.com', 'user-agent:Mozilla/5.0'],
+    });
+  } catch (e) {
+    console.error('yt-dlp dumpSingleJson error:', e.message?.slice(0, 200));
+    throw e;
+  }
 
-  // Debug: log keys để biết structure
   if (info && typeof info === 'object') {
-    const keys = Object.keys(info);
-    console.log('yt-dlp info keys:', keys.slice(0, 15).join(', '));
-
-    // Thử các field phổ biến
-    if (info.url) return info.url;
-    if (info.webpage_url && info.formats?.length) {
-      // Ưu tiên audio-only formats
-      const audioFmts = info.formats.filter(f => f.url && f.vcodec === 'none' && f.acodec !== 'none');
-      if (audioFmts.length) return audioFmts[audioFmts.length - 1].url;
-      // Fallback bất kỳ format có URL
-      const anyFmt = info.formats.slice().reverse().find(f => f.url);
-      if (anyFmt) return anyFmt.url;
+    // Trường hợp yt-dlp trả về format đã chọn với url trực tiếp
+    if (info.url) {
+      console.log('Audio URL from info.url');
+      return info.url;
     }
-    // Nếu info chính là format object (có url trực tiếp)
+
+    // Lấy từ formats array
+    if (info.formats?.length) {
+      // Ưu tiên audio-only (vcodec=none), bitrate cao nhất
+      const audioFmts = info.formats
+        .filter(f => f.url && f.vcodec === 'none' && f.acodec !== 'none')
+        .sort((a, b) => (b.abr || 0) - (a.abr || 0));
+
+      if (audioFmts.length) {
+        console.log('Audio URL from formats (audio-only), abr:', audioFmts[0].abr);
+        return audioFmts[0].url;
+      }
+
+      // Fallback: bất kỳ format có URL
+      const anyFmt = info.formats.slice().reverse().find(f => f.url);
+      if (anyFmt) {
+        console.log('Audio URL from formats (any), ext:', anyFmt.ext);
+        return anyFmt.url;
+      }
+    }
+
     if (info.manifest_url) return info.manifest_url;
+
+    console.error('yt-dlp info keys:', Object.keys(info).slice(0, 20).join(', '));
   }
-
-  // Fallback: dùng getUrl (trả về string URL trực tiếp)
-  console.log('Falling back to getUrl method...');
-  const urlOutput = await exec(songUrl, {
-    format: 'bestaudio/best',
-    getUrl: true,
-    noPlaylist: true,
-  });
-
-  let audioUrl;
-  if (typeof urlOutput === 'string') {
-    audioUrl = urlOutput.trim().split('\n')[0];
-  } else if (urlOutput?.stdout) {
-    audioUrl = urlOutput.stdout.trim().split('\n')[0];
-  } else if (urlOutput && typeof urlOutput === 'object') {
-    // Log toàn bộ để debug
-    console.log('getUrl output:', JSON.stringify(urlOutput).slice(0, 300));
-    audioUrl = Object.values(urlOutput).find(v => typeof v === 'string' && v.startsWith('http'));
-  }
-
-  if (audioUrl?.startsWith('http')) return audioUrl;
 
   throw new Error('Cannot extract audio URL from yt-dlp output');
 }

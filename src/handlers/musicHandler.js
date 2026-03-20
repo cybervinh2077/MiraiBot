@@ -105,8 +105,8 @@ async function cmdPlay(msg, args, voiceChannel) {
     const videoId = interaction.values[0].split('_')[0];
     await searching.edit({ content: `⏳ Đang tải bài hát...`, components: [] });
 
-    const song = await getVideoById(videoId).catch(() => null);
-    if (!song) return searching.edit({ content: '❌ Không thể tải bài hát này.', components: [] });
+    const song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
+    if (!song) return searching.edit({ content: '❌ Không thể tải thông tin bài hát này.', components: [] });
 
     song.requestedBy = msg.author.id;
     await addToQueue(msg, song, voiceChannel, searching);
