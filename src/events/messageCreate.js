@@ -179,7 +179,7 @@ module.exports = {
       );
     }
     if (msg.content === `${prefix}help`) {
-      return msg.reply([
+      const helpText = [
         '📖 **Danh sách lệnh MiraiBot**',
         '',
         '**🔐 Tài khoản**',
@@ -233,7 +233,16 @@ module.exports = {
         '*Save/Load:*',
         '`/save-state` — Lưu thủ công',
         '`/load-state` — Xem snapshot save file',
-      ].join('\n'));
+      ].join('\n');
+
+      try {
+        await msg.author.send(helpText);
+        await msg.reply('📬 Đã gửi danh sách lệnh vào DM của bạn!');
+      } catch {
+        // User tắt DM, gửi vào channel thay thế
+        await msg.reply(helpText);
+      }
+      return;
     }
 
     // Lệnh music
