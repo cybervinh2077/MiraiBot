@@ -97,9 +97,6 @@ async function cmdPlay(msg, args, voiceChannel) {
     )
     .setFooter({ text: `Tìm thấy trong ${searchTime}ms` });
 
-  // Gửi thumbnail bài #1 kèm theo (Discord hiển thị preview URL)
-  const thumbUrl = `https://i.ytimg.com/vi/${results[0].videoId}/mqdefault.jpg`;
-
   const select = new StringSelectMenuBuilder()
     .setCustomId(`music_select_${msg.author.id}`)
     .setPlaceholder('Chọn bài hát...')
@@ -112,7 +109,7 @@ async function cmdPlay(msg, args, voiceChannel) {
 
   const row = new ActionRowBuilder().addComponents(select);
   await searching.edit({
-    content: thumbUrl,
+    content: null,
     embeds: [embed],
     components: [row],
   });
