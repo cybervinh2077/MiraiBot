@@ -8,11 +8,6 @@ const {
 } = require('@discordjs/voice');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { exec } = require('yt-dlp-exec');
-
-// Dùng system yt-dlp nếu có (luôn mới hơn bản trong node_modules)
-const ytDlpExec = process.env.YTDLP_PATH
-  ? require('yt-dlp-exec').create(process.env.YTDLP_PATH)
-  : exec;
 const { spawn } = require('child_process');
 
 // Ưu tiên system ffmpeg (cần thiết trên ARM như Orange Pi)
@@ -169,32 +164,39 @@ function buildPlayerUI(song, paused = false) {
 }
 
 async function getAudioUrl(songUrl) {
-  let info;
+  let result;
   try {
-    info = await exec(songUrl, {
+    result = await exec(songUrl, {
       dumpSingleJson: true,
       noPlaylist: true,
       format: 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
       noCheckCertificates: true,
       noWarnings: true,
-      preferFreeFormats: true,
-      addHeaders: ['referer:youtube.com', 'user-agent:Mozilla/5.0'],
     });
   } catch (e) {
-    console.error('yt-dlp dumpSingleJson error:', e.message?.slice(0, 200));
-    throw e;
+    // execa throw khi exitCode != 0, nhưng stdout vẫn có thể có data
+    result = e;
+  }
+
+  // result có thể là execa object với stdout chứa JSON
+  let info = result;
+  if (result && typeof result === 'object' && 'stdout' in result) {
+    try {
+      info = JSON.parse(result.stdout);
+    } catch {
+      // stdout không phải JSON, log stderr để debug
+      console.error('yt-dlp stderr:', (result.stderr || '').slice(0, 300));
+      throw new Error('yt-dlp failed: ' + (result.stderr || result.all || '').slice(0, 200));
+    }
   }
 
   if (info && typeof info === 'object') {
-    // Trường hợp yt-dlp trả về format đã chọn với url trực tiếp
     if (info.url) {
       console.log('Audio URL from info.url');
       return info.url;
     }
 
-    // Lấy từ formats array
     if (info.formats?.length) {
-      // Ưu tiên audio-only (vcodec=none), bitrate cao nhất
       const audioFmts = info.formats
         .filter(f => f.url && f.vcodec === 'none' && f.acodec !== 'none')
         .sort((a, b) => (b.abr || 0) - (a.abr || 0));
@@ -204,7 +206,6 @@ async function getAudioUrl(songUrl) {
         return audioFmts[0].url;
       }
 
-      // Fallback: bất kỳ format có URL
       const anyFmt = info.formats.slice().reverse().find(f => f.url);
       if (anyFmt) {
         console.log('Audio URL from formats (any), ext:', anyFmt.ext);
@@ -213,8 +214,6 @@ async function getAudioUrl(songUrl) {
     }
 
     if (info.manifest_url) return info.manifest_url;
-
-    console.error('yt-dlp info keys:', Object.keys(info).slice(0, 20).join(', '));
   }
 
   throw new Error('Cannot extract audio URL from yt-dlp output');
