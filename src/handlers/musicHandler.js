@@ -329,7 +329,6 @@ async function cmdLeave(msg) {
 async function cmdLyrics(msg, args) {
   const queue = getQueue(msg.guild.id);
 
-  // Nếu có args thì tìm theo tên, không thì dùng bài đang phát
   const title = args.length ? args.join(' ') : queue?.current?.title;
   if (!title) return msg.reply('❌ Không có bài nào đang phát. Dùng `?lyrics <tên bài>` để tìm.');
 
@@ -340,17 +339,25 @@ async function cmdLyrics(msg, args) {
     return searching.edit(`❌ Không tìm thấy lời bài **${title}**.`);
   }
 
-  // Discord giới hạn 2000 ký tự, chia nhỏ nếu cần
-  const header = `📜 **${result.artist} — ${result.song}**\n\n`;
-  const chunks = splitLyrics(result.lyrics, 1900 - header.length);
+  const { EmbedBuilder } = require('discord.js');
+  const chunks = splitLyrics(result.lyrics, 4000);
 
-  await searching.edit(header + chunks[0]);
+  const makeEmbed = (lyricsChunk, page, total) =>
+    new EmbedBuilder()
+      .setColor(0x5865F2)
+      .setTitle(`📜 ${result.artist} — ${result.song}`)
+      .setDescription('```\n' + lyricsChunk + '\n```')
+      .setFooter({ text: total > 1 ? `Trang ${page}/${total}` : 'MiraiBot Lyrics' });
+
+  const totalPages = chunks.length;
+  await searching.edit({ content: null, embeds: [makeEmbed(chunks[0], 1, totalPages)] });
+
   for (let i = 1; i < chunks.length; i++) {
-    await msg.channel.send(chunks[i]);
+    await msg.channel.send({ embeds: [makeEmbed(chunks[i], i + 1, totalPages)] });
   }
 }
 
-function splitLyrics(lyrics, maxLen) {
+function splitLyrics(lyrics, maxLen = 4000) {
   const chunks = [];
   let current = '';
   for (const line of lyrics.split('\n')) {
