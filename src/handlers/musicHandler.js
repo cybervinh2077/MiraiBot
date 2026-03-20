@@ -86,7 +86,7 @@ async function cmdPlay(msg, args, voiceChannel) {
   // Emoji số
   const numEmoji = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
 
-  // Embed hiển thị danh sách + thumbnail bài đầu tiên
+  // Embed hiển thị danh sách
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
     .setTitle(`🎵 Kết quả tìm kiếm: ${query}`)
@@ -95,8 +95,10 @@ async function cmdPlay(msg, args, voiceChannel) {
         `${numEmoji[i]} **[${r.title}](https://youtu.be/${r.videoId})**\n└ ${r.channel}`
       ).join('\n\n')
     )
-    .setImage(`https://i.ytimg.com/vi/${results[0].videoId}/mqdefault.jpg`)
-    .setFooter({ text: `Tìm thấy trong ${searchTime}ms • Thumbnail: bài #1` });
+    .setFooter({ text: `Tìm thấy trong ${searchTime}ms` });
+
+  // Gửi thumbnail bài #1 kèm theo (Discord hiển thị preview URL)
+  const thumbUrl = `https://i.ytimg.com/vi/${results[0].videoId}/mqdefault.jpg`;
 
   const select = new StringSelectMenuBuilder()
     .setCustomId(`music_select_${msg.author.id}`)
@@ -110,7 +112,7 @@ async function cmdPlay(msg, args, voiceChannel) {
 
   const row = new ActionRowBuilder().addComponents(select);
   await searching.edit({
-    content: null,
+    content: thumbUrl,
     embeds: [embed],
     components: [row],
   });
@@ -129,7 +131,6 @@ async function cmdPlay(msg, args, voiceChannel) {
     
     // Hiển thị loading ngay
     await searching.edit({ content: `⏳ Đang tải **${results[parseInt(idx)].title}**...`, embeds: [], components: [] });
-
     let song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
 
     // Fallback: dùng thông tin từ search result nếu API không trả về
