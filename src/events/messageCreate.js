@@ -168,12 +168,13 @@ module.exports = {
       );
     }
     if (msg.content === `${prefix}help`) {
-      const helpText = buildHelpText(prefix, guildId);
+      const { buildHelpEmbed } = require('../commands/general/helpBuilder');
+      const embed = buildHelpEmbed(prefix, guildId);
       try {
-        await msg.author.send(helpText);
+        await msg.author.send({ embeds: [embed] });
         await msg.reply(t(guildId, 'help_dm_sent'));
       } catch {
-        await msg.reply(helpText);
+        await msg.reply({ embeds: [embed] });
       }
       return;
     }
@@ -227,32 +228,3 @@ module.exports = {
   },
 };
 
-function buildHelpText(prefix, guildId) {
-  return [
-    '📖 **MiraiBot Commands**',
-    '',
-    '**🔐 Account**',
-    `\`${prefix}login\` \`/login\``,
-    `\`${prefix}logout\` \`/logout\``,
-    `\`${prefix}info\` \`/info\``,
-    `\`${prefix}prefix\` \`/prefix\``,
-    `\`/lang\` — Change language (vn/en/jp)`,
-    '',
-    '**🎵 Music**',
-    `\`${prefix}play\` \`/play\` — Play or queue a song`,
-    `\`${prefix}skip\` \`/skip\` | \`${prefix}stop\` \`/stop\``,
-    `\`${prefix}pause\` \`/pause\` | \`${prefix}resume\` \`/resume\``,
-    `\`${prefix}queue\` \`/queue\` | \`${prefix}nowplaying\` \`/nowplaying\``,
-    `\`${prefix}volume\` \`/volume\` | \`${prefix}loop\` \`/loop\``,
-    `\`${prefix}shuffle\` \`/shuffle\` | \`${prefix}lyrics\` \`/lyrics\``,
-    `\`${prefix}leave\` \`/leave\``,
-    '',
-    '**🎭 Fun**',
-    `\`/hug\` \`/kiss\` \`/cuddle\``,
-    '',
-    '**🛠️ Other**',
-    `\`${prefix}ping\` \`/ping\` | \`${prefix}help\` \`/help\``,
-    '',
-    '**🎲 D&D** — `/start-campaign` `/assign-char` `/action` and more',
-  ].join('\n');
-}
