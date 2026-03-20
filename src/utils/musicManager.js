@@ -242,7 +242,6 @@ async function playSong(queue, song) {
       'pipe:1',
     ], { stdio: ['ignore', 'pipe', 'pipe'] });
 
-    // Log ffmpeg stderr để debug
     ffmpeg.stderr.on('data', (d) => {
       const msg = d.toString();
       if (msg.includes('Error') || msg.includes('error')) {
@@ -258,7 +257,6 @@ async function playSong(queue, song) {
     resource.volume?.setVolume(queue.volume);
     queue.player.play(resource);
 
-    // Xóa player message cũ nếu có
     if (queue.playerMessage) {
       await queue.playerMessage.delete().catch(() => {});
       queue.playerMessage = null;
@@ -267,7 +265,24 @@ async function playSong(queue, song) {
     queue.playerMessage = await queue.textChannel.send(buildPlayerUI(song));
   } catch (err) {
     console.error('Play error:', err.message);
-    await queue.textChannel.send(`❌ Lỗi khi phát **${song.title}**, bỏ qua...`);
+
+    // Thử tìm video thay thế cùng tên
+    try {
+      console.log('Trying alternative video for:', song.title);
+      const results = await searchYoutubeList(song.title);
+      // Bỏ qua video hiện tại, thử video tiếp theo
+      const alt = results.find(r => r.videoId !== song.url.match(/v=([^&]+)/)?.[1]);
+      if (alt) {
+        const altSong = await getVideoById(alt.videoId);
+        if (altSong) {
+          altSong.requestedBy = song.requestedBy;
+          await queue.textChannel.send(`⚠️ **${song.title}** bị chặn, đang thử phiên bản khác...`);
+          return playSong(queue, altSong);
+        }
+      }
+    } catch {}
+
+    await queue.textChannel.send(`❌ Không thể phát **${song.title}** (có thể do bản quyền), bỏ qua...`);
     playNext(queue);
   }
 }
