@@ -73,4 +73,15 @@ function clearGuildAuth(guildId) {
   saveSessions(guildSessions);
 }
 
-module.exports = { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth };
+// Prefix riêng theo guild, lưu trong Map riêng
+const guildPrefixes = new Map();
+
+function getPrefix(guildId) {
+  return guildPrefixes.get(guildId) || '?';
+}
+
+function setPrefix(guildId, prefix) {
+  guildPrefixes.set(guildId, prefix);
+}
+
+module.exports = { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, setPrefix };

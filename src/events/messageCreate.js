@@ -1,4 +1,4 @@
-const { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth } = require('../utils/guildAuth');
+const { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, setPrefix } = require('../utils/guildAuth');
 const { handleMusic } = require('../handlers/musicHandler');
 
 const API_URL = process.env.API_URL;
@@ -18,9 +18,10 @@ module.exports = {
     if (!msg.guild) return; // Bỏ qua DM
 
     const guildId = msg.guild.id;
+    const prefix = getPrefix(guildId);
 
     // Lệnh ?logout - chỉ người đã đăng nhập mới dùng được
-    if (msg.content === '?logout') {
+    if (msg.content === `${prefix}logout`) {
       if (!isGuildAuthed(guildId)) {
         return msg.reply('⚠️ Server này chưa đăng nhập, không có gì để logout.');
       }
@@ -37,7 +38,7 @@ module.exports = {
     }
 
     // Lệnh ?login - bất kỳ ai cũng có thể dùng để đăng nhập cho server
-    if (msg.content === '?login') {
+    if (msg.content === `${prefix}login`) {
       if (isGuildAuthed(guildId)) {
         const session = getGuildAuth(guildId);
         return msg.reply(
@@ -114,15 +115,15 @@ module.exports = {
       return;
     }
 
-    // Các lệnh khác bắt đầu bằng ? cần kiểm tra auth
-    if (msg.content.startsWith('?') && !isGuildAuthed(guildId)) {
+    // Các lệnh khác bắt đầu bằng prefix cần kiểm tra auth
+    if (msg.content.startsWith(prefix) && !isGuildAuthed(guildId)) {
       return msg.reply(
-        '⚠️ Bot chưa được đăng nhập cho server này. Dùng lệnh `?login` để liên kết tài khoản MyMirai.'
+        `⚠️ Bot chưa được đăng nhập cho server này. Dùng lệnh \`${prefix}login\` để liên kết tài khoản MyMirai.`
       );
     }
 
     // Lệnh ?ping
-    if (msg.content === '?ping') {
+    if (msg.content === `${prefix}ping`) {
       const { execSync } = require('child_process');
       const os = require('os');
 
@@ -177,37 +178,38 @@ module.exports = {
         `\`\`\``
       );
     }
-    if (msg.content === '?help') {
+    if (msg.content === `${prefix}help`) {
       return msg.reply([
         '📖 **Danh sách lệnh MiraiBot**',
         '',
         '**🔐 Tài khoản**',
-        '`?login` — Liên kết tài khoản MyMirai cho server',
-        '`?logout` — Hủy liên kết (chỉ người đã đăng nhập)',
-        '`?info` — Xem thông tin tài khoản đã liên kết',
+        `\`${prefix}login\` — Liên kết tài khoản MyMirai cho server`,
+        `\`${prefix}logout\` — Hủy liên kết (chỉ người đã đăng nhập)`,
+        `\`${prefix}info\` — Xem thông tin tài khoản đã liên kết`,
+        `\`${prefix}prefix <ký tự>\` — Đổi prefix (chỉ người đã đăng nhập)`,
         '',
         '**🎵 Nhạc**',
-        '`?play <tên/url>` — Phát nhạc hoặc thêm vào queue',
-        '`?skip` — Bỏ qua bài hiện tại',
-        '`?stop` — Dừng nhạc và xóa queue',
-        '`?pause` — Tạm dừng',
-        '`?resume` — Tiếp tục phát',
-        '`?queue` — Xem danh sách queue',
-        '`?nowplaying` — Xem bài đang phát',
-        '`?volume <0-200>` — Chỉnh âm lượng',
-        '`?loop` — Loop bài hiện tại',
-        '`?loop queue` — Loop toàn bộ queue',
-        '`?shuffle` — Shuffle queue',
-        '`?remove <số>` — Xóa bài khỏi queue',
-        '`?jump <số>` — Nhảy đến bài thứ N',
-        '`?clear` — Xóa toàn bộ queue',
-        '`?leave` — Bot rời kênh voice',
-        '`?lyrics` — Lấy lời bài đang phát',
-        '`?lyrics <tên bài>` — Tìm lời bài theo tên',
+        `\`${prefix}play <tên/url>\` — Phát nhạc hoặc thêm vào queue`,
+        `\`${prefix}skip\` — Bỏ qua bài hiện tại`,
+        `\`${prefix}stop\` — Dừng nhạc và xóa queue`,
+        `\`${prefix}pause\` — Tạm dừng`,
+        `\`${prefix}resume\` — Tiếp tục phát`,
+        `\`${prefix}queue\` — Xem danh sách queue`,
+        `\`${prefix}nowplaying\` — Xem bài đang phát`,
+        `\`${prefix}volume <0-200>\` — Chỉnh âm lượng`,
+        `\`${prefix}loop\` — Loop bài hiện tại`,
+        `\`${prefix}loop queue\` — Loop toàn bộ queue`,
+        `\`${prefix}shuffle\` — Shuffle queue`,
+        `\`${prefix}remove <số>\` — Xóa bài khỏi queue`,
+        `\`${prefix}jump <số>\` — Nhảy đến bài thứ N`,
+        `\`${prefix}clear\` — Xóa toàn bộ queue`,
+        `\`${prefix}leave\` — Bot rời kênh voice`,
+        `\`${prefix}lyrics\` — Lấy lời bài đang phát`,
+        `\`${prefix}lyrics <tên bài>\` — Tìm lời bài theo tên`,
         '',
         '**🛠️ Khác**',
-        '`?ping` — Kiểm tra độ trễ',
-        '`?help` — Hiện danh sách lệnh này',
+        `\`${prefix}ping\` — Kiểm tra độ trễ & thông tin hệ thống`,
+        `\`${prefix}help\` — Hiện danh sách lệnh này`,
         '',
         '**🎲 D&D — Echoes of the Forgotten Broadcast**',
         '*Multiplayer:*',
@@ -237,12 +239,29 @@ module.exports = {
     // Lệnh music
     const args = msg.content.trim().split(/\s+/);
     const command = args.shift().toLowerCase();
-    if (MUSIC_COMMANDS.has(command)) {
-      return handleMusic(msg, command, args);
+    // Chuyển đổi lệnh music sang dạng có prefix động
+    const musicCommandsWithPrefix = new Set([...MUSIC_COMMANDS].map(c => prefix + c.slice(1)));
+    if (musicCommandsWithPrefix.has(command)) {
+      const baseCommand = '?' + command.slice(prefix.length);
+      return handleMusic(msg, baseCommand, args);
+    }
+
+    // Lệnh prefix
+    if (command === `${prefix}prefix`) {
+      const session = getGuildAuth(guildId);
+      if (msg.author.id !== session?.discordUserId) {
+        return msg.reply(`❌ Chỉ **${session?.discordUsername || 'người đã đăng nhập'}** mới có thể đổi prefix.`);
+      }
+      const newPrefix = args[0];
+      if (!newPrefix || newPrefix.length > 3) {
+        return msg.reply('❌ Prefix không hợp lệ. Tối đa 3 ký tự, ví dụ: `!`, `!!`, `m!`');
+      }
+      setPrefix(guildId, newPrefix);
+      return msg.reply(`✅ Đã đổi prefix thành \`${newPrefix}\`. Dùng \`${newPrefix}help\` để xem lệnh.`);
     }
 
     // Lệnh ?info
-    if (msg.content === '?info') {
+    if (command === `${prefix}info`) {
       const session = getGuildAuth(guildId);
       const linkedAt = new Date(session.linkedAt);
       const now = new Date();
@@ -262,7 +281,8 @@ module.exports = {
         `👤 Discord: **${session.discordUsername}**\n` +
         `🌐 MyMirai: **${session.miraiUsername || 'Không rõ'}**\n` +
         `🕐 Đăng nhập lúc: **${linkedAt.toLocaleString('vi-VN')}**\n` +
-        `⏱️ Thời gian đã đăng nhập: **${duration}**`
+        `⏱️ Thời gian đã đăng nhập: **${duration}**\n` +
+        `🔧 Prefix hiện tại: \`${prefix}\``
       );
     }
   },
