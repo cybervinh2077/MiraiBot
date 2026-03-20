@@ -81,6 +81,23 @@ async function cmdPlay(msg, args, voiceChannel) {
   
   if (!results.length) return searching.edit('❌ Không tìm thấy kết quả nào.');
 
+  const { EmbedBuilder } = require('discord.js');
+
+  // Emoji số
+  const numEmoji = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+
+  // Embed hiển thị thumbnails
+  const embed = new EmbedBuilder()
+    .setColor(0x5865F2)
+    .setTitle(`🎵 Kết quả tìm kiếm: ${query}`)
+    .setDescription(
+      results.map((r, i) =>
+        `${numEmoji[i]} **[${r.title}](https://youtu.be/${r.videoId})**\n└ ${r.channel}`
+      ).join('\n\n')
+    )
+    .setThumbnail(`https://i.ytimg.com/vi/${results[0].videoId}/mqdefault.jpg`)
+    .setFooter({ text: `Tìm thấy trong ${searchTime}ms` });
+
   const select = new StringSelectMenuBuilder()
     .setCustomId(`music_select_${msg.author.id}`)
     .setPlaceholder('Chọn bài hát...')
@@ -88,11 +105,13 @@ async function cmdPlay(msg, args, voiceChannel) {
       label: (r.title || `Bài ${i + 1}`).replace(/[^\w\s\-.,!?()]/g, '').slice(0, 100) || `Bài ${i + 1}`,
       description: (r.channel || 'Unknown').slice(0, 100),
       value: `${r.videoId}|${i}`,
+      emoji: numEmoji[i],
     })));
 
   const row = new ActionRowBuilder().addComponents(select);
   await searching.edit({
-    content: `🎵 Kết quả tìm kiếm cho **${query}** \`(${searchTime}ms)\`:`,
+    content: null,
+    embeds: [embed],
     components: [row],
   });
 
@@ -109,7 +128,7 @@ async function cmdPlay(msg, args, voiceChannel) {
     const [videoId, idx] = interaction.values[0].split('|');
     
     // Hiển thị loading ngay
-    await searching.edit({ content: `⏳ Đang tải **${results[parseInt(idx)].title}**...`, components: [] });
+    await searching.edit({ content: `⏳ Đang tải **${results[parseInt(idx)].title}**...`, embeds: [], components: [] });
 
     let song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
 
@@ -139,7 +158,7 @@ async function cmdPlay(msg, args, voiceChannel) {
 
   collector.on('end', (collected) => {
     if (!collected.size) {
-      searching.edit({ content: '⏰ Hết thời gian chọn bài.', components: [] }).catch(() => {});
+      searching.edit({ content: '⏰ Hết thời gian chọn bài.', embeds: [], components: [] }).catch(() => {});
     }
   });
 }
