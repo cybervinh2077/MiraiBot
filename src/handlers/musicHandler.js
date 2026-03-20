@@ -102,11 +102,27 @@ async function cmdPlay(msg, args, voiceChannel) {
 
   collector.on('collect', async (interaction) => {
     await interaction.deferUpdate();
-    const videoId = interaction.values[0].split('_')[0];
+    const [videoId, idx] = interaction.values[0].split('_');
     await searching.edit({ content: `⏳ Đang tải bài hát...`, components: [] });
 
-    const song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
-    if (!song) return searching.edit({ content: '❌ Không thể tải thông tin bài hát này.', components: [] });
+    let song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
+
+    // Fallback: dùng thông tin từ search result nếu API không trả về
+    if (!song) {
+      const searchResult = results[parseInt(idx)];
+      if (searchResult) {
+        console.warn('getVideoById returned null, using search result for:', videoId);
+        song = {
+          title: searchResult.title,
+          url: `https://www.youtube.com/watch?v=${videoId}`,
+          duration: '??:??',
+          thumbnail: null,
+          requestedBy: msg.author.id,
+        };
+      } else {
+        return searching.edit({ content: '❌ Không thể tải thông tin bài hát này.', components: [] });
+      }
+    }
 
     song.requestedBy = msg.author.id;
     await addToQueue(msg, song, voiceChannel, searching);
