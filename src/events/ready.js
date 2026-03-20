@@ -21,5 +21,22 @@ module.exports = {
     client.commands.forEach((_, name) => console.log(`   └─ /${name}`));
     console.log('──────────────────────────────────────');
     console.log('');
+
+    // Set activity và update mỗi 5 phút
+    const updateActivity = () => {
+      const servers = client.guilds.cache.size;
+      const users = client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0);
+      client.user.setPresence({
+        activities: [{
+          name: 'System info',
+          state: `${servers} servers • ${users} users`,
+          type: 4, // type 4 = Custom Status
+        }],
+        status: 'online',
+      });
+    };
+
+    updateActivity();
+    setInterval(updateActivity, 5 * 60 * 1000);
   },
 };
