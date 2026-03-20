@@ -79,7 +79,28 @@ async function getVideoById(videoId) {
   });
   const res = await fetch(`${YT_VIDEO_URL}?${params}`);
   const data = await res.json();
-  if (!data.items?.length) return null;
+  if (data.error) {
+    console.error('YouTube API error:', data.error.code, data.error.message);
+    return null;
+  }
+  if (!data.items?.length) {
+    console.warn('getVideoById: no items for videoId:', videoId, '— trying search fallback');
+    // Fallback: search bằng videoId để lấy thông tin
+    const searchParams = new URLSearchParams({
+      part: 'snippet', q: videoId, type: 'video', maxResults: 1, key: YT_API_KEY,
+    });
+    const searchRes = await fetch(`${YT_SEARCH_URL}?${searchParams}`);
+    const searchData = await searchRes.json();
+    if (!searchData.items?.length) return null;
+    const item = searchData.items[0];
+    return {
+      title: item.snippet.title,
+      url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
+      duration: '??:??',
+      thumbnail: item.snippet.thumbnails?.default?.url,
+      requestedBy: null,
+    };
+  }
   const item = data.items[0];
   return {
     title: item.snippet.title,
