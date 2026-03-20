@@ -65,3 +65,8 @@ async function deployCommands() {
 }
 
 deployCommands().then(() => client.login(process.env.TOKEN));
+
+// Khởi động Telegram bot control
+const telegramBot = require('./utils/telegramBot');
+telegramBot.start();
+client.once('ready', () => telegramBot.setDiscordClient(client));
