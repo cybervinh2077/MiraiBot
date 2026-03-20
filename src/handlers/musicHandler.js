@@ -84,7 +84,7 @@ async function cmdPlay(msg, args, voiceChannel) {
     .addOptions(results.map((r, i) => ({
       label: (r.title || `Bài ${i + 1}`).replace(/[^\w\s\-.,!?()]/g, '').slice(0, 100) || `Bài ${i + 1}`,
       description: (r.channel || 'Unknown').slice(0, 100),
-      value: `${r.videoId}_${i}`,
+      value: `${r.videoId}|${i}`,
     })));
 
   const row = new ActionRowBuilder().addComponents(select);
@@ -102,7 +102,7 @@ async function cmdPlay(msg, args, voiceChannel) {
 
   collector.on('collect', async (interaction) => {
     await interaction.deferUpdate();
-    const [videoId, idx] = interaction.values[0].split('_');
+    const [videoId, idx] = interaction.values[0].split('|');
     await searching.edit({ content: `⏳ Đang tải bài hát...`, components: [] });
 
     let song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
