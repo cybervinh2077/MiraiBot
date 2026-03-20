@@ -28,6 +28,27 @@ const YT_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const YT_VIDEO_URL = 'https://www.googleapis.com/youtube/v3/videos';
 
 const queues = new Map();
+const audioUrlCache = new Map(); // Cache audio URL để tránh gọi yt-dlp lại
+
+function getCachedAudioUrl(videoId) {
+  const cached = audioUrlCache.get(videoId);
+  if (!cached) return null;
+  // URL YouTube expire sau ~6 giờ, cache 5 giờ cho an toàn
+  if (Date.now() - cached.timestamp > 5 * 60 * 60 * 1000) {
+    audioUrlCache.delete(videoId);
+    return null;
+  }
+  return cached.url;
+}
+
+function setCachedAudioUrl(videoId, url) {
+  audioUrlCache.set(videoId, { url, timestamp: Date.now() });
+  // Giới hạn cache 50 entries
+  if (audioUrlCache.size > 50) {
+    const firstKey = audioUrlCache.keys().next().value;
+    audioUrlCache.delete(firstKey);
+  }
+}
 
 function getQueue(guildId) {
   return queues.get(guildId);
@@ -171,6 +192,17 @@ function buildPlayerUI(song, paused = false) {
 }
 
 async function getAudioUrl(songUrl) {
+  // Kiểm tra cache trước
+  const videoId = extractVideoId(songUrl);
+  if (videoId) {
+    const cached = getCachedAudioUrl(videoId);
+    if (cached) {
+      console.log(`⚡ Audio URL from cache for ${videoId}`);
+      return cached;
+    }
+  }
+
+  const startTime = Date.now();
   let result;
   try {
     result = await exec(songUrl, {
@@ -179,6 +211,8 @@ async function getAudioUrl(songUrl) {
       format: 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
       noCheckCertificates: true,
       noWarnings: true,
+      skipDownload: true, // Chỉ lấy metadata, không download
+      socketTimeout: 10, // Timeout 10s thay vì mặc định 30s
     });
   } catch (e) {
     // execa throw khi exitCode != 0, nhưng stdout vẫn có thể có data
@@ -199,7 +233,9 @@ async function getAudioUrl(songUrl) {
 
   if (info && typeof info === 'object') {
     if (info.url) {
-      console.log('Audio URL from info.url');
+      const elapsed = Date.now() - startTime;
+      console.log(`⏱️ yt-dlp extracted URL in ${elapsed}ms`);
+      if (videoId) setCachedAudioUrl(videoId, info.url);
       return info.url;
     }
 
@@ -209,13 +245,17 @@ async function getAudioUrl(songUrl) {
         .sort((a, b) => (b.abr || 0) - (a.abr || 0));
 
       if (audioFmts.length) {
-        console.log('Audio URL from formats (audio-only), abr:', audioFmts[0].abr);
+        const elapsed = Date.now() - startTime;
+        console.log(`⏱️ yt-dlp extracted URL from formats in ${elapsed}ms (abr: ${audioFmts[0].abr})`);
+        if (videoId) setCachedAudioUrl(videoId, audioFmts[0].url);
         return audioFmts[0].url;
       }
 
       const anyFmt = info.formats.slice().reverse().find(f => f.url);
       if (anyFmt) {
-        console.log('Audio URL from formats (any), ext:', anyFmt.ext);
+        const elapsed = Date.now() - startTime;
+        console.log(`⏱️ yt-dlp extracted URL (fallback) in ${elapsed}ms`);
+        if (videoId) setCachedAudioUrl(videoId, anyFmt.url);
         return anyFmt.url;
       }
     }
@@ -231,6 +271,17 @@ async function playSong(queue, song) {
 
   queue.current = song;
   clearIdleTimer(queue);
+
+  // Prefetch audio URL của bài tiếp theo trong background
+  if (queue.songs.length > 0) {
+    const nextSong = queue.songs[0];
+    const nextVideoId = extractVideoId(nextSong.url);
+    if (nextVideoId && !getCachedAudioUrl(nextVideoId)) {
+      setTimeout(() => {
+        getAudioUrl(nextSong.url).catch(() => {}); // Prefetch, ignore errors
+      }, 2000); // Delay 2s để không tranh bandwidth với bài hiện tại
+    }
+  }
 
   try {
     const audioUrl = await getAudioUrl(song.url);
@@ -321,4 +372,4 @@ async function connect(queue) {
   });
 }
 
-module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, clearIdleTimer, formatDuration, buildPlayerUI };
+module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl };

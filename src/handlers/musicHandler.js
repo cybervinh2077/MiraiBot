@@ -74,8 +74,11 @@ async function cmdPlay(msg, args, voiceChannel) {
 
   // Tìm kiếm và hiển thị danh sách chọn
   const searching = await msg.reply(`🔍 Đang tìm kiếm: **${query}**...`);
+  
+  const startTime = Date.now();
   const results = await searchYoutubeList(query).catch(() => []);
-
+  const searchTime = Date.now() - startTime;
+  
   if (!results.length) return searching.edit('❌ Không tìm thấy kết quả nào.');
 
   const select = new StringSelectMenuBuilder()
@@ -89,7 +92,7 @@ async function cmdPlay(msg, args, voiceChannel) {
 
   const row = new ActionRowBuilder().addComponents(select);
   await searching.edit({
-    content: `🎵 Kết quả tìm kiếm cho **${query}**:`,
+    content: `🎵 Kết quả tìm kiếm cho **${query}** \`(${searchTime}ms)\`:`,
     components: [row],
   });
 
@@ -101,9 +104,12 @@ async function cmdPlay(msg, args, voiceChannel) {
   });
 
   collector.on('collect', async (interaction) => {
+    const loadStart = Date.now();
     await interaction.deferUpdate();
     const [videoId, idx] = interaction.values[0].split('|');
-    await searching.edit({ content: `⏳ Đang tải bài hát...`, components: [] });
+    
+    // Hiển thị loading ngay
+    await searching.edit({ content: `⏳ Đang tải **${results[parseInt(idx)].title}**...`, components: [] });
 
     let song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
 
@@ -125,6 +131,9 @@ async function cmdPlay(msg, args, voiceChannel) {
     }
 
     song.requestedBy = msg.author.id;
+    const loadTime = Date.now() - loadStart;
+    console.log(`⏱️ Load time for ${videoId}: ${loadTime}ms`);
+    
     await addToQueue(msg, song, voiceChannel, searching);
   });
 
