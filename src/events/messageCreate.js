@@ -1,5 +1,6 @@
 const { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, setPrefix } = require('../utils/guildAuth');
 const { handleMusic } = require('../handlers/musicHandler');
+const { t } = require('../utils/i18n');
 
 const API_URL = process.env.API_URL;
 const API_KEY = process.env.API_KEY;
@@ -23,27 +24,21 @@ module.exports = {
     // Lệnh ?logout - chỉ người đã đăng nhập mới dùng được
     if (msg.content === `${prefix}logout`) {
       if (!isGuildAuthed(guildId)) {
-        return msg.reply('⚠️ Server này chưa đăng nhập, không có gì để logout.');
+        return msg.reply(t(guildId, 'logout_not_logged_in'));
       }
-
       const session = getGuildAuth(guildId);
       if (msg.author.id !== session.discordUserId) {
-        return msg.reply(
-          `❌ Bạn không có quyền logout. Chỉ **${session.discordUsername}** (người đã đăng nhập) mới có thể thực hiện.`
-        );
+        return msg.reply(t(guildId, 'logout_no_permission', { user: session.discordUsername }));
       }
-
       clearGuildAuth(guildId);
-      return msg.reply('👋 Đã logout thành công. Bot sẽ không hoạt động cho đến khi có người dùng `?login` lại.');
+      return msg.reply(t(guildId, 'logout_success', { prefix }));
     }
 
     // Lệnh ?login - bất kỳ ai cũng có thể dùng để đăng nhập cho server
     if (msg.content === `${prefix}login`) {
       if (isGuildAuthed(guildId)) {
         const session = getGuildAuth(guildId);
-        return msg.reply(
-          `✅ Server này đã được đăng nhập bởi **${session.discordUsername}** lúc ${new Date(session.linkedAt).toLocaleString('vi-VN')}.`
-        );
+        return msg.reply(t(guildId, 'already_logged_in', { user: session.discordUsername, time: new Date(session.linkedAt).toLocaleString('vi-VN') }));
       }
 
       try {
@@ -63,12 +58,10 @@ module.exports = {
         const data = await res.json();
 
         if (!data.loginUrl) {
-          return msg.reply('❌ Không thể tạo link đăng nhập. Vui lòng thử lại sau.');
+          return msg.reply(t(guildId, 'login_failed'));
         }
 
-        await msg.reply(
-          `🔗 Để liên kết tài khoản MyMirai cho server này, truy cập:\n${data.loginUrl}\n\n⏳ Link có hiệu lực trong 10 phút.`
-        );
+        await msg.reply(t(guildId, 'login_link', { url: data.loginUrl }));
 
         // Poll for login completion every 5 seconds
         const interval = setInterval(async () => {
@@ -96,9 +89,7 @@ module.exports = {
                 miraiUsername: result.username || 'Không rõ',
               });
               const miraiUsername = result.username || 'Không rõ';
-              await msg.reply(
-                `✅ Đăng nhập thành công! Xin chào **${miraiUsername}**!\nTất cả thành viên trong server **${msg.guild.name}** giờ có thể dùng bot.`
-              );
+              await msg.reply(t(guildId, 'login_success', { user: miraiUsername, guild: msg.guild.name }));
             }
           } catch (err) {
             console.error('Poll error:', err);
@@ -109,7 +100,7 @@ module.exports = {
         setTimeout(() => clearInterval(interval), 10 * 60 * 1000);
       } catch (err) {
         console.error('Login error:', err);
-        await msg.reply('❌ Có lỗi xảy ra. Vui lòng thử lại sau.');
+        await msg.reply(t(guildId, 'login_error'));
       }
 
       return;
@@ -117,9 +108,7 @@ module.exports = {
 
     // Các lệnh khác bắt đầu bằng prefix cần kiểm tra auth
     if (msg.content.startsWith(prefix) && !isGuildAuthed(guildId)) {
-      return msg.reply(
-        `⚠️ Bot chưa được đăng nhập cho server này. Dùng lệnh \`${prefix}login\` để liên kết tài khoản MyMirai.`
-      );
+      return msg.reply(t(guildId, 'not_logged_in', { prefix }));
     }
 
     // Lệnh ?ping
@@ -179,67 +168,11 @@ module.exports = {
       );
     }
     if (msg.content === `${prefix}help`) {
-      const helpText = [
-        '📖 **Danh sách lệnh MiraiBot**',
-        '',
-        '**🔐 Tài khoản**',
-        `\`${prefix}login\` — Liên kết tài khoản MyMirai cho server`,
-        `\`${prefix}logout\` — Hủy liên kết (chỉ người đã đăng nhập)`,
-        `\`${prefix}info\` — Xem thông tin tài khoản đã liên kết`,
-        `\`${prefix}prefix <ký tự>\` — Đổi prefix (chỉ người đã đăng nhập)`,
-        '',
-        '**🎵 Nhạc**',
-        `\`${prefix}play <tên/url>\` — Phát nhạc hoặc thêm vào queue`,
-        `\`${prefix}skip\` — Bỏ qua bài hiện tại`,
-        `\`${prefix}stop\` — Dừng nhạc và xóa queue`,
-        `\`${prefix}pause\` — Tạm dừng`,
-        `\`${prefix}resume\` — Tiếp tục phát`,
-        `\`${prefix}queue\` — Xem danh sách queue`,
-        `\`${prefix}nowplaying\` — Xem bài đang phát`,
-        `\`${prefix}volume <0-200>\` — Chỉnh âm lượng`,
-        `\`${prefix}loop\` — Loop bài hiện tại`,
-        `\`${prefix}loop queue\` — Loop toàn bộ queue`,
-        `\`${prefix}shuffle\` — Shuffle queue`,
-        `\`${prefix}remove <số>\` — Xóa bài khỏi queue`,
-        `\`${prefix}jump <số>\` — Nhảy đến bài thứ N`,
-        `\`${prefix}clear\` — Xóa toàn bộ queue`,
-        `\`${prefix}leave\` — Bot rời kênh voice`,
-        `\`${prefix}lyrics\` — Lấy lời bài đang phát`,
-        `\`${prefix}lyrics <tên bài>\` — Tìm lời bài theo tên`,
-        '',
-        '**🛠️ Khác**',
-        `\`${prefix}ping\` — Kiểm tra độ trễ & thông tin hệ thống`,
-        `\`${prefix}help\` — Hiện danh sách lệnh này`,
-        '',
-        '**🎲 D&D — Echoes of the Forgotten Broadcast**',
-        '*Multiplayer:*',
-        '`/start-campaign` — Bắt đầu campaign mới',
-        '`/assign-char` — Chọn nhân vật (kai/miko/reno/dj)',
-        '`/party-status` — Xem trạng thái party',
-        '`/roll-signal` — Toàn party roll signal (buff/debuff)',
-        '`/roll-init` — Roll initiative',
-        '`/action` — Dùng ability tấn công',
-        '`/quest-log` — Xem danh sách quest',
-        '`/complete-quest` — Hoàn thành quest + nhận XP',
-        '`/channel-surf` — Đổi kit + roll init',
-        '`/stat` — Xem stat block nhân vật/boss',
-        '',
-        '*Solo:*',
-        '`/solo-start` — Bắt đầu solo (3 AI đồng hành)',
-        '`/solo-next` — Tiến lượt tiếp / bắt đầu encounter',
-        '`/solo-auto` — Bật/tắt auto-combat',
-        '`/solo-quest` — Skip đến quest/channel cụ thể',
-        '',
-        '*Save/Load:*',
-        '`/save-state` — Lưu thủ công',
-        '`/load-state` — Xem snapshot save file',
-      ].join('\n');
-
+      const helpText = buildHelpText(prefix, guildId);
       try {
         await msg.author.send(helpText);
-        await msg.reply('📬 Đã gửi danh sách lệnh vào DM của bạn!');
+        await msg.reply(t(guildId, 'help_dm_sent'));
       } catch {
-        // User tắt DM, gửi vào channel thay thế
         await msg.reply(helpText);
       }
       return;
@@ -259,40 +192,67 @@ module.exports = {
     if (command === `${prefix}prefix`) {
       const session = getGuildAuth(guildId);
       if (msg.author.id !== session?.discordUserId) {
-        return msg.reply(`❌ Chỉ **${session?.discordUsername || 'người đã đăng nhập'}** mới có thể đổi prefix.`);
+        return msg.reply(t(guildId, 'prefix_no_permission', { user: session?.discordUsername || '?' }));
       }
       const newPrefix = args[0];
       if (!newPrefix || newPrefix.length > 3) {
-        return msg.reply('❌ Prefix không hợp lệ. Tối đa 3 ký tự, ví dụ: `!`, `!!`, `m!`');
+        return msg.reply(t(guildId, 'prefix_invalid'));
       }
       setPrefix(guildId, newPrefix);
-      return msg.reply(`✅ Đã đổi prefix thành \`${newPrefix}\`. Dùng \`${newPrefix}help\` để xem lệnh.`);
+      return msg.reply(t(guildId, 'prefix_success', { prefix: newPrefix }));
     }
 
     // Lệnh ?info
     if (command === `${prefix}info`) {
       const session = getGuildAuth(guildId);
       const linkedAt = new Date(session.linkedAt);
-      const now = new Date();
-      const diffMs = now - linkedAt;
-
-      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
+      const diffMs = Date.now() - linkedAt;
+      const days = Math.floor(diffMs / 86400000);
+      const hours = Math.floor((diffMs % 86400000) / 3600000);
+      const minutes = Math.floor((diffMs % 3600000) / 60000);
       let duration = '';
-      if (days > 0) duration += `${days} ngày `;
-      if (hours > 0) duration += `${hours} giờ `;
-      duration += `${minutes} phút`;
+      if (days > 0) duration += t(guildId, 'duration_days', { d: days });
+      if (hours > 0) duration += t(guildId, 'duration_hours', { h: hours });
+      duration += t(guildId, 'duration_minutes', { m: minutes });
 
-      return msg.reply(
-        `📋 **Thông tin tài khoản**\n` +
-        `👤 Discord: **${session.discordUsername}**\n` +
-        `🌐 MyMirai: **${session.miraiUsername || 'Không rõ'}**\n` +
-        `🕐 Đăng nhập lúc: **${linkedAt.toLocaleString('vi-VN')}**\n` +
-        `⏱️ Thời gian đã đăng nhập: **${duration}**\n` +
-        `🔧 Prefix hiện tại: \`${prefix}\``
-      );
+      return msg.reply([
+        t(guildId, 'info_title'),
+        t(guildId, 'info_discord', { user: session.discordUsername }),
+        t(guildId, 'info_mirai', { user: session.miraiUsername || '?' }),
+        t(guildId, 'info_linked_at', { time: linkedAt.toLocaleString('vi-VN') }),
+        t(guildId, 'info_duration', { duration }),
+        t(guildId, 'info_prefix', { prefix }),
+      ].join('\n'));
     }
   },
 };
+
+function buildHelpText(prefix, guildId) {
+  return [
+    '📖 **MiraiBot Commands**',
+    '',
+    '**🔐 Account**',
+    `\`${prefix}login\` \`/login\``,
+    `\`${prefix}logout\` \`/logout\``,
+    `\`${prefix}info\` \`/info\``,
+    `\`${prefix}prefix\` \`/prefix\``,
+    `\`/lang\` — Change language (vn/en/jp)`,
+    '',
+    '**🎵 Music**',
+    `\`${prefix}play\` \`/play\` — Play or queue a song`,
+    `\`${prefix}skip\` \`/skip\` | \`${prefix}stop\` \`/stop\``,
+    `\`${prefix}pause\` \`/pause\` | \`${prefix}resume\` \`/resume\``,
+    `\`${prefix}queue\` \`/queue\` | \`${prefix}nowplaying\` \`/nowplaying\``,
+    `\`${prefix}volume\` \`/volume\` | \`${prefix}loop\` \`/loop\``,
+    `\`${prefix}shuffle\` \`/shuffle\` | \`${prefix}lyrics\` \`/lyrics\``,
+    `\`${prefix}leave\` \`/leave\``,
+    '',
+    '**🎭 Fun**',
+    `\`/hug\` \`/kiss\` \`/cuddle\``,
+    '',
+    '**🛠️ Other**',
+    `\`${prefix}ping\` \`/ping\` | \`${prefix}help\` \`/help\``,
+    '',
+    '**🎲 D&D** — `/start-campaign` `/assign-char` `/action` and more',
+  ].join('\n');
+}

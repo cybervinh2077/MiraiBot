@@ -1,0 +1,100 @@
+module.exports = {
+  // General
+  not_logged_in: '⚠️ Bot chưa được đăng nhập cho server này. Dùng lệnh `{prefix}login` để liên kết tài khoản MyMirai.',
+  no_permission: '❌ Bạn không có quyền thực hiện lệnh này.',
+
+  // Login/Logout
+  already_logged_in: '✅ Server này đã được đăng nhập bởi **{user}** lúc {time}.',
+  login_link: '🔗 Để liên kết tài khoản MyMirai cho server này, truy cập:\n{url}\n\n⏳ Link có hiệu lực trong 10 phút.',
+  login_failed: '❌ Không thể tạo link đăng nhập. Vui lòng thử lại sau.',
+  login_success: '✅ Đăng nhập thành công! Xin chào **{user}**!\nTất cả thành viên trong server **{guild}** giờ có thể dùng bot.',
+  login_error: '❌ Có lỗi xảy ra. Vui lòng thử lại sau.',
+  logout_not_logged_in: '⚠️ Server này chưa đăng nhập, không có gì để logout.',
+  logout_no_permission: '❌ Bạn không có quyền logout. Chỉ **{user}** (người đã đăng nhập) mới có thể thực hiện.',
+  logout_success: '👋 Đã logout thành công. Bot sẽ không hoạt động cho đến khi có người dùng `{prefix}login` lại.',
+
+  // Info
+  info_title: '📋 **Thông tin tài khoản**',
+  info_discord: '👤 Discord: **{user}**',
+  info_mirai: '🌐 MyMirai: **{user}**',
+  info_linked_at: '🕐 Đăng nhập lúc: **{time}**',
+  info_duration: '⏱️ Thời gian đã đăng nhập: **{duration}**',
+  info_prefix: '🔧 Prefix hiện tại: `{prefix}`',
+  info_not_logged_in: '⚠️ Server chưa đăng nhập. Dùng `/login` để liên kết.',
+  duration_days: '{d} ngày ',
+  duration_hours: '{h} giờ ',
+  duration_minutes: '{m} phút',
+
+  // Prefix
+  prefix_invalid: '❌ Prefix không hợp lệ. Tối đa 3 ký tự, ví dụ: `!`, `!!`, `m!`',
+  prefix_success: '✅ Đã đổi prefix thành `{prefix}`. Dùng `{prefix}help` để xem lệnh.',
+  prefix_no_permission: '❌ Chỉ **{user}** mới có thể đổi prefix.',
+
+  // Lang
+  lang_success: '✅ Đã đổi ngôn ngữ bot thành **Tiếng Việt** 🇻🇳',
+  lang_invalid: '❌ Ngôn ngữ không hợp lệ. Chọn: `vn`, `en`, `jp`',
+
+  // Music
+  music_no_voice: '❌ Bạn cần vào một kênh voice trước.',
+  music_searching: '🔍 Đang tìm kiếm: **{query}**...',
+  music_no_results: '❌ Không tìm thấy kết quả nào.',
+  music_search_title: '🎵 Kết quả tìm kiếm: {query}',
+  music_search_footer: 'Tìm thấy trong {ms}ms',
+  music_loading: '⏳ Đang tải **{title}**...',
+  music_no_song: '❌ Vui lòng nhập tên bài hát hoặc URL.',
+  music_added: '🎵 Đã thêm: **{title}** `[{duration}]`',
+  music_queued: '✅ Đã thêm vào queue: **{title}** `[{duration}]` — vị trí #{pos}',
+  music_no_voice_connect: '❌ Không thể kết nối kênh voice.',
+  music_load_fail: '❌ Không thể tải bài hát này.',
+  music_skipped: '⏭️ Đã bỏ qua bài hiện tại.',
+  music_no_playing: '❌ Không có bài nào đang phát.',
+  music_stopped: '⏹️ Đã dừng nhạc và xóa queue.',
+  music_not_in_voice: '❌ Bot không ở trong kênh voice.',
+  music_paused: '⏸️ Đã tạm dừng.',
+  music_already_paused: '⚠️ Nhạc đang bị tạm dừng rồi. Dùng `{prefix}resume` để tiếp tục.',
+  music_resumed: '▶️ Tiếp tục phát.',
+  music_not_paused: '⚠️ Nhạc không bị tạm dừng.',
+  music_volume_invalid: '❌ Volume từ 0 đến 200.',
+  music_volume_set: '🔊 Volume: **{vol}%**',
+  music_loop_song: '🔂 Loop bài hiện tại: **{state}**',
+  music_loop_queue: '🔁 Loop queue: **{state}**',
+  music_loop_on: 'BẬT',
+  music_loop_off: 'TẮT',
+  music_shuffle_done: '🔀 Đã shuffle queue.',
+  music_queue_empty: '❌ Queue trống.',
+  music_remove_invalid: '❌ Vị trí không hợp lệ. Queue có **{count}** bài.',
+  music_removed: '🗑️ Đã xóa: **{title}**',
+  music_cleared: '🗑️ Đã xóa toàn bộ queue.',
+  music_left: '👋 Đã rời kênh voice.',
+  music_idle: '⏹️ Không có bài nào được thêm trong 1 phút. Bot đã rời kênh voice.',
+  music_queue_end: '✅ Queue đã hết bài. Bot sẽ tự rời sau 1 phút nếu không có bài mới.',
+  music_play_error: '❌ Không thể phát **{title}** (có thể do bản quyền hoặc bị chặn), bỏ qua...',
+  music_now_playing: '🎵 **Đang phát:** {title} `[{duration}]`',
+  music_select_placeholder: 'Chọn bài hát...',
+  music_timeout: '⏰ Hết thời gian chọn bài.',
+  music_queue_header: '▶️ **Đang phát:** {title} `[{duration}]`',
+  music_queue_list: '**Queue:**',
+  music_queue_more: '... và **{count}** bài nữa',
+  music_queue_none: '📭 Không có bài nào trong queue.',
+  music_jump_invalid: '❌ Vị trí không hợp lệ. Queue có **{count}** bài.',
+  music_jumped: '⏩ Nhảy đến bài #{pos}: **{title}**',
+
+  // Lyrics
+  lyrics_searching: '🔍 Đang tìm lời bài: **{title}**...',
+  lyrics_not_found: '❌ Không tìm thấy lời bài **{title}**.',
+  lyrics_no_playing: '❌ Không có bài nào đang phát. Dùng `{prefix}lyrics <tên bài>` để tìm.',
+  lyrics_footer: 'Trang {page}/{total}',
+  lyrics_footer_single: 'MiraiBot Lyrics',
+
+  // Fun
+  fun_cooldown: '⏳ Chờ **{sec}s** nữa nhé!',
+  hug_self: '**{user}** tự ôm bản thân... 🥺',
+  hug_other: '**{user}** ôm **{target}**! 🤗',
+  kiss_self: '**{user}** thổi nụ hôn gió~ 💋',
+  kiss_other: '**{user}** hôn **{target}**! 💋',
+  cuddle_self: '**{user}** cuộn tròn một mình... 🥺',
+  cuddle_other: '**{user}** cuddle với **{target}**! 🥰',
+
+  // Help
+  help_dm_sent: '📬 Đã gửi danh sách lệnh vào DM của bạn!',
+};

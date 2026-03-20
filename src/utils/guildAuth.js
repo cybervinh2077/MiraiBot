@@ -85,4 +85,15 @@ function setPrefix(guildId, prefix) {
   saveSessions(guildSessions);
 }
 
-module.exports = { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, setPrefix };
+function getGuildLang(guildId) {
+  const session = guildSessions.get(guildId);
+  return session?.lang || 'vn';
+}
+
+function setGuildLang(guildId, lang) {
+  const session = guildSessions.get(guildId) || {};
+  guildSessions.set(guildId, { ...session, lang });
+  saveSessions(guildSessions);
+}
+
+module.exports = { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, setPrefix, getGuildLang, setGuildLang };

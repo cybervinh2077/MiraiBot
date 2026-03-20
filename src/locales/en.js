@@ -1,0 +1,100 @@
+module.exports = {
+  // General
+  not_logged_in: '⚠️ This server is not logged in. Use `{prefix}login` to link a MyMirai account.',
+  no_permission: '❌ You do not have permission to use this command.',
+
+  // Login/Logout
+  already_logged_in: '✅ This server is already logged in by **{user}** at {time}.',
+  login_link: '🔗 To link your MyMirai account for this server, visit:\n{url}\n\n⏳ Link expires in 10 minutes.',
+  login_failed: '❌ Could not generate login link. Please try again later.',
+  login_success: '✅ Login successful! Welcome **{user}**!\nAll members in **{guild}** can now use the bot.',
+  login_error: '❌ An error occurred. Please try again later.',
+  logout_not_logged_in: '⚠️ This server is not logged in, nothing to logout.',
+  logout_no_permission: '❌ You cannot logout. Only **{user}** (who logged in) can do this.',
+  logout_success: '👋 Logged out successfully. Use `{prefix}login` to log in again.',
+
+  // Info
+  info_title: '📋 **Account Info**',
+  info_discord: '👤 Discord: **{user}**',
+  info_mirai: '🌐 MyMirai: **{user}**',
+  info_linked_at: '🕐 Logged in at: **{time}**',
+  info_duration: '⏱️ Session duration: **{duration}**',
+  info_prefix: '🔧 Current prefix: `{prefix}`',
+  info_not_logged_in: '⚠️ Server not logged in. Use `/login` to link.',
+  duration_days: '{d}d ',
+  duration_hours: '{h}h ',
+  duration_minutes: '{m}m',
+
+  // Prefix
+  prefix_invalid: '❌ Invalid prefix. Max 3 characters, e.g. `!`, `!!`, `m!`',
+  prefix_success: '✅ Prefix changed to `{prefix}`. Use `{prefix}help` to see commands.',
+  prefix_no_permission: '❌ Only **{user}** can change the prefix.',
+
+  // Lang
+  lang_success: '✅ Bot language set to **English** 🇬🇧',
+  lang_invalid: '❌ Invalid language. Choose: `vn`, `en`, `jp`',
+
+  // Music
+  music_no_voice: '❌ You need to join a voice channel first.',
+  music_searching: '🔍 Searching: **{query}**...',
+  music_no_results: '❌ No results found.',
+  music_search_title: '🎵 Search results: {query}',
+  music_search_footer: 'Found in {ms}ms',
+  music_loading: '⏳ Loading **{title}**...',
+  music_no_song: '❌ Please enter a song name or URL.',
+  music_added: '🎵 Added: **{title}** `[{duration}]`',
+  music_queued: '✅ Added to queue: **{title}** `[{duration}]` — position #{pos}',
+  music_no_voice_connect: '❌ Cannot connect to voice channel.',
+  music_load_fail: '❌ Cannot load this song.',
+  music_skipped: '⏭️ Skipped current song.',
+  music_no_playing: '❌ Nothing is playing.',
+  music_stopped: '⏹️ Stopped and cleared queue.',
+  music_not_in_voice: '❌ Bot is not in a voice channel.',
+  music_paused: '⏸️ Paused.',
+  music_already_paused: '⚠️ Already paused. Use `{prefix}resume` to continue.',
+  music_resumed: '▶️ Resumed.',
+  music_not_paused: '⚠️ Music is not paused.',
+  music_volume_invalid: '❌ Volume must be between 0 and 200.',
+  music_volume_set: '🔊 Volume: **{vol}%**',
+  music_loop_song: '🔂 Loop current song: **{state}**',
+  music_loop_queue: '🔁 Loop queue: **{state}**',
+  music_loop_on: 'ON',
+  music_loop_off: 'OFF',
+  music_shuffle_done: '🔀 Queue shuffled.',
+  music_queue_empty: '❌ Queue is empty.',
+  music_remove_invalid: '❌ Invalid position. Queue has **{count}** songs.',
+  music_removed: '🗑️ Removed: **{title}**',
+  music_cleared: '🗑️ Queue cleared.',
+  music_left: '👋 Left voice channel.',
+  music_idle: '⏹️ No songs added for 1 minute. Bot left the voice channel.',
+  music_queue_end: '✅ Queue ended. Bot will leave in 1 minute if no new songs are added.',
+  music_play_error: '❌ Cannot play **{title}** (may be restricted), skipping...',
+  music_now_playing: '🎵 **Now playing:** {title} `[{duration}]`',
+  music_select_placeholder: 'Select a song...',
+  music_timeout: '⏰ Selection timed out.',
+  music_queue_header: '▶️ **Now playing:** {title} `[{duration}]`',
+  music_queue_list: '**Queue:**',
+  music_queue_more: '... and **{count}** more',
+  music_queue_none: '📭 No songs in queue.',
+  music_jump_invalid: '❌ Invalid position. Queue has **{count}** songs.',
+  music_jumped: '⏩ Jumped to #{pos}: **{title}**',
+
+  // Lyrics
+  lyrics_searching: '🔍 Searching lyrics for: **{title}**...',
+  lyrics_not_found: '❌ Lyrics not found for **{title}**.',
+  lyrics_no_playing: '❌ Nothing is playing. Use `{prefix}lyrics <title>` to search.',
+  lyrics_footer: 'Page {page}/{total}',
+  lyrics_footer_single: 'MiraiBot Lyrics',
+
+  // Fun
+  fun_cooldown: '⏳ Wait **{sec}s** before using this again!',
+  hug_self: '**{user}** hugs themselves... 🥺',
+  hug_other: '**{user}** hugs **{target}**! 🤗',
+  kiss_self: '**{user}** blows a kiss~ 💋',
+  kiss_other: '**{user}** kisses **{target}**! 💋',
+  cuddle_self: '**{user}** cuddles alone... 🥺',
+  cuddle_other: '**{user}** cuddles with **{target}**! 🥰',
+
+  // Help
+  help_dm_sent: '📬 Help has been sent to your DMs!',
+};

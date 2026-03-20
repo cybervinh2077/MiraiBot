@@ -1,0 +1,100 @@
+module.exports = {
+  // General
+  not_logged_in: '⚠️ このサーバーはまだログインしていません。`{prefix}login` でMyMiraiアカウントを連携してください。',
+  no_permission: '❌ このコマンドを使用する権限がありません。',
+
+  // Login/Logout
+  already_logged_in: '✅ このサーバーは **{user}** が {time} にログイン済みです。',
+  login_link: '🔗 MyMiraiアカウントを連携するには、こちらにアクセスしてください:\n{url}\n\n⏳ リンクは10分間有効です。',
+  login_failed: '❌ ログインリンクを生成できませんでした。後でもう一度お試しください。',
+  login_success: '✅ ログイン成功！ようこそ **{user}** さん！\n**{guild}** の全メンバーがボットを使えるようになりました。',
+  login_error: '❌ エラーが発生しました。後でもう一度お試しください。',
+  logout_not_logged_in: '⚠️ このサーバーはログインしていません。',
+  logout_no_permission: '❌ ログアウトできません。**{user}**（ログインした人）のみ実行できます。',
+  logout_success: '👋 ログアウトしました。`{prefix}login` で再ログインできます。',
+
+  // Info
+  info_title: '📋 **アカウント情報**',
+  info_discord: '👤 Discord: **{user}**',
+  info_mirai: '🌐 MyMirai: **{user}**',
+  info_linked_at: '🕐 ログイン日時: **{time}**',
+  info_duration: '⏱️ ログイン時間: **{duration}**',
+  info_prefix: '🔧 現在のプレフィックス: `{prefix}`',
+  info_not_logged_in: '⚠️ サーバーがログインしていません。`/login` で連携してください。',
+  duration_days: '{d}日 ',
+  duration_hours: '{h}時間 ',
+  duration_minutes: '{m}分',
+
+  // Prefix
+  prefix_invalid: '❌ 無効なプレフィックスです。最大3文字（例: `!`, `!!`, `m!`）',
+  prefix_success: '✅ プレフィックスを `{prefix}` に変更しました。`{prefix}help` でコマンド一覧を確認できます。',
+  prefix_no_permission: '❌ **{user}** のみプレフィックスを変更できます。',
+
+  // Lang
+  lang_success: '✅ ボットの言語を**日本語** 🇯🇵 に設定しました。',
+  lang_invalid: '❌ 無効な言語です。`vn`、`en`、`jp` から選んでください。',
+
+  // Music
+  music_no_voice: '❌ まずボイスチャンネルに参加してください。',
+  music_searching: '🔍 検索中: **{query}**...',
+  music_no_results: '❌ 結果が見つかりませんでした。',
+  music_search_title: '🎵 検索結果: {query}',
+  music_search_footer: '{ms}msで見つかりました',
+  music_loading: '⏳ **{title}** を読み込み中...',
+  music_no_song: '❌ 曲名またはURLを入力してください。',
+  music_added: '🎵 追加しました: **{title}** `[{duration}]`',
+  music_queued: '✅ キューに追加: **{title}** `[{duration}]` — #{pos}番目',
+  music_no_voice_connect: '❌ ボイスチャンネルに接続できません。',
+  music_load_fail: '❌ この曲を読み込めません。',
+  music_skipped: '⏭️ スキップしました。',
+  music_no_playing: '❌ 再生中の曲がありません。',
+  music_stopped: '⏹️ 停止してキューをクリアしました。',
+  music_not_in_voice: '❌ ボットはボイスチャンネルにいません。',
+  music_paused: '⏸️ 一時停止しました。',
+  music_already_paused: '⚠️ すでに一時停止中です。`{prefix}resume` で再開できます。',
+  music_resumed: '▶️ 再開しました。',
+  music_not_paused: '⚠️ 一時停止していません。',
+  music_volume_invalid: '❌ 音量は0〜200の間で指定してください。',
+  music_volume_set: '🔊 音量: **{vol}%**',
+  music_loop_song: '🔂 現在の曲をループ: **{state}**',
+  music_loop_queue: '🔁 キューをループ: **{state}**',
+  music_loop_on: 'オン',
+  music_loop_off: 'オフ',
+  music_shuffle_done: '🔀 キューをシャッフルしました。',
+  music_queue_empty: '❌ キューが空です。',
+  music_remove_invalid: '❌ 無効な位置です。キューには **{count}** 曲あります。',
+  music_removed: '🗑️ 削除しました: **{title}**',
+  music_cleared: '🗑️ キューをクリアしました。',
+  music_left: '👋 ボイスチャンネルから退出しました。',
+  music_idle: '⏹️ 1分間曲が追加されませんでした。ボットが退出しました。',
+  music_queue_end: '✅ キューが終了しました。1分後に自動退出します。',
+  music_play_error: '❌ **{title}** を再生できません（著作権等の理由）、スキップします...',
+  music_now_playing: '🎵 **再生中:** {title} `[{duration}]`',
+  music_select_placeholder: '曲を選んでください...',
+  music_timeout: '⏰ 選択がタイムアウトしました。',
+  music_queue_header: '▶️ **再生中:** {title} `[{duration}]`',
+  music_queue_list: '**キュー:**',
+  music_queue_more: '... あと **{count}** 曲',
+  music_queue_none: '📭 キューに曲がありません。',
+  music_jump_invalid: '❌ 無効な位置です。キューには **{count}** 曲あります。',
+  music_jumped: '⏩ #{pos}番目にジャンプ: **{title}**',
+
+  // Lyrics
+  lyrics_searching: '🔍 歌詞を検索中: **{title}**...',
+  lyrics_not_found: '❌ **{title}** の歌詞が見つかりませんでした。',
+  lyrics_no_playing: '❌ 再生中の曲がありません。`{prefix}lyrics <曲名>` で検索できます。',
+  lyrics_footer: '{page}/{total} ページ',
+  lyrics_footer_single: 'MiraiBot Lyrics',
+
+  // Fun
+  fun_cooldown: '⏳ あと **{sec}秒** 待ってください！',
+  hug_self: '**{user}** が自分を抱きしめた... 🥺',
+  hug_other: '**{user}** が **{target}** を抱きしめた！ 🤗',
+  kiss_self: '**{user}** がエアキスを送った~ 💋',
+  kiss_other: '**{user}** が **{target}** にキスした！ 💋',
+  cuddle_self: '**{user}** が一人でくっついた... 🥺',
+  cuddle_other: '**{user}** が **{target}** とくっついた！ 🥰',
+
+  // Help
+  help_dm_sent: '📬 コマンド一覧をDMに送りました！',
+};

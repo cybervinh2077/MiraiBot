@@ -12,9 +12,12 @@ const {
 const { getLyrics } = require('../utils/lyrics');
 const { AudioPlayerStatus } = require('@discordjs/voice');
 const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { t } = require('../utils/i18n');
+
+function gid(msg) { return msg.guild?.id; }
 
 async function handleMusic(msg, command, args) {
-  const { guild, member, channel } = msg;
+  const { member } = msg;
   const voiceChannel = member?.voice?.channel;
 
   // Lệnh không cần voice channel
@@ -23,7 +26,7 @@ async function handleMusic(msg, command, args) {
 
   // Các lệnh còn lại cần ở trong voice channel
   if (!voiceChannel) {
-    return msg.reply('❌ Bạn cần vào một kênh voice trước.');
+    return msg.reply(t(gid(msg), 'music_no_voice'));
   }
 
   switch (command) {
@@ -62,114 +65,83 @@ async function handleMusic(msg, command, args) {
 }
 
 async function cmdPlay(msg, args, voiceChannel) {
-  if (!args.length) return msg.reply('❌ Vui lòng nhập tên bài hát hoặc URL.');
+  const g = gid(msg);
+  if (!args.length) return msg.reply(t(g, 'music_no_song'));
 
   const query = args.join(' ');
   const isUrl = query.includes('youtube.com/watch') || query.includes('youtu.be/');
+  if (isUrl) return playDirect(msg, query, voiceChannel);
 
-  // Nếu là URL thì phát thẳng
-  if (isUrl) {
-    return playDirect(msg, query, voiceChannel);
-  }
-
-  // Tìm kiếm và hiển thị danh sách chọn
-  const searching = await msg.reply(`🔍 Đang tìm kiếm: **${query}**...`);
-  
+  const searching = await msg.reply(t(g, 'music_searching', { query }));
   const startTime = Date.now();
   const results = await searchYoutubeList(query).catch(() => []);
   const searchTime = Date.now() - startTime;
-  
-  if (!results.length) return searching.edit('❌ Không tìm thấy kết quả nào.');
+
+  if (!results.length) return searching.edit(t(g, 'music_no_results'));
 
   const { EmbedBuilder } = require('discord.js');
-
-  // Emoji số
   const numEmoji = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
 
-  // Embed hiển thị danh sách
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
-    .setTitle(`🎵 Kết quả tìm kiếm: ${query}`)
-    .setDescription(
-      results.map((r, i) =>
-        `${numEmoji[i]} **[${r.title}](https://youtu.be/${r.videoId})**\n└ ${r.channel}`
-      ).join('\n\n')
-    )
-    .setFooter({ text: `Tìm thấy trong ${searchTime}ms` });
+    .setTitle(t(g, 'music_search_title', { query }))
+    .setDescription(results.map((r, i) =>
+      `${numEmoji[i]} **[${r.title}](https://youtu.be/${r.videoId})**\n└ ${r.channel}`
+    ).join('\n\n'))
+    .setFooter({ text: t(g, 'music_search_footer', { ms: searchTime }) });
 
   const select = new StringSelectMenuBuilder()
     .setCustomId(`music_select_${msg.author.id}`)
-    .setPlaceholder('Chọn bài hát...')
+    .setPlaceholder(t(g, 'music_select_placeholder'))
     .addOptions(results.map((r, i) => ({
-      label: (r.title || `Bài ${i + 1}`).replace(/[^\w\s\-.,!?()]/g, '').slice(0, 100) || `Bài ${i + 1}`,
+      label: (r.title || `#${i + 1}`).replace(/[^\w\s\-.,!?()]/g, '').slice(0, 100) || `#${i + 1}`,
       description: (r.channel || 'Unknown').slice(0, 100),
       value: `${r.videoId}|${i}`,
       emoji: numEmoji[i],
     })));
 
   const row = new ActionRowBuilder().addComponents(select);
-  await searching.edit({
-    content: null,
-    embeds: [embed],
-    components: [row],
-  });
+  await searching.edit({ content: null, embeds: [embed], components: [row] });
 
-  // Chờ user chọn trong 30 giây
   const collector = searching.createMessageComponentCollector({
     filter: i => i.customId === `music_select_${msg.author.id}` && i.user.id === msg.author.id,
-    time: 30_000,
-    max: 1,
+    time: 30_000, max: 1,
   });
 
   collector.on('collect', async (interaction) => {
-    const loadStart = Date.now();
     await interaction.deferUpdate();
     const [videoId, idx] = interaction.values[0].split('|');
-    
-    // Hiển thị loading ngay
-    await searching.edit({ content: `⏳ Đang tải **${results[parseInt(idx)].title}**...`, embeds: [], components: [] });
-    let song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
+    await searching.edit({ content: t(g, 'music_loading', { title: results[parseInt(idx)].title }), embeds: [], components: [] });
 
-    // Fallback: dùng thông tin từ search result nếu API không trả về
+    let song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
     if (!song) {
-      const searchResult = results[parseInt(idx)];
-      if (searchResult) {
-        console.warn('getVideoById returned null, using search result for:', videoId);
-        song = {
-          title: searchResult.title,
-          url: `https://www.youtube.com/watch?v=${videoId}`,
-          duration: '??:??',
-          thumbnail: null,
-          requestedBy: msg.author.id,
-        };
+      const sr = results[parseInt(idx)];
+      if (sr) {
+        song = { title: sr.title, url: `https://www.youtube.com/watch?v=${videoId}`, duration: '??:??', thumbnail: null, requestedBy: msg.author.id };
       } else {
-        return searching.edit({ content: '❌ Không thể tải thông tin bài hát này.', components: [] });
+        return searching.edit({ content: t(g, 'music_load_fail'), components: [] });
       }
     }
-
     song.requestedBy = msg.author.id;
-    const loadTime = Date.now() - loadStart;
-    console.log(`⏱️ Load time for ${videoId}: ${loadTime}ms`);
-    
     await addToQueue(msg, song, voiceChannel, searching);
   });
 
   collector.on('end', (collected) => {
-    if (!collected.size) {
-      searching.edit({ content: '⏰ Hết thời gian chọn bài.', embeds: [], components: [] }).catch(() => {});
-    }
+    if (!collected.size) searching.edit({ content: t(g, 'music_timeout'), embeds: [], components: [] }).catch(() => {});
   });
 }
 
 async function playDirect(msg, url, voiceChannel) {
-  const searching = await msg.reply('⏳ Đang tải bài hát...');
+  const g = gid(msg);
+  const searching = await msg.reply(t(g, 'music_loading', { title: url }));
   const song = await searchYoutube(url).catch(() => null);
-  if (!song) return searching.edit('❌ Không thể tải bài hát này.');
+  if (!song) return searching.edit(t(g, 'music_load_fail'));
   song.requestedBy = msg.author.id;
   await addToQueue(msg, song, voiceChannel, searching);
 }
 
 async function addToQueue(msg, song, voiceChannel, replyMsg) {
+  const g = gid(msg);
   let queue = getQueue(msg.guild.id);
 
   if (!queue) {
@@ -178,197 +150,196 @@ async function addToQueue(msg, song, voiceChannel, replyMsg) {
       await connect(queue);
     } catch {
       deleteQueue(msg.guild.id);
-      return replyMsg.edit('❌ Không thể kết nối kênh voice.');
+      return replyMsg.edit(t(g, 'music_no_voice_connect'));
     }
     queue.songs.push(song);
-    await replyMsg.edit({ content: `🎵 Đã thêm: **${song.title}** \`[${song.duration}]\``, components: [] });
+    await replyMsg.edit({ content: t(g, 'music_added', { title: song.title, duration: song.duration }), components: [] });
     playSong(queue, queue.songs.shift());
   } else {
     queue.songs.push(song);
-    // Nếu không có bài nào đang phát (queue vừa hết), tự động phát luôn
     if (!queue.current) {
       clearIdleTimer(queue);
-      await replyMsg.edit({ content: `🎵 Đã thêm: **${song.title}** \`[${song.duration}]\``, components: [] });
+      await replyMsg.edit({ content: t(g, 'music_added', { title: song.title, duration: song.duration }), components: [] });
       playSong(queue, queue.songs.shift());
     } else {
-      await replyMsg.edit({ content: `✅ Đã thêm vào queue: **${song.title}** \`[${song.duration}]\` — vị trí #${queue.songs.length}`, components: [] });
+      await replyMsg.edit({ content: t(g, 'music_queued', { title: song.title, duration: song.duration, pos: queue.songs.length }), components: [] });
     }
   }
 }
 
 async function cmdSkip(msg) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue?.current) return msg.reply('❌ Không có bài nào đang phát.');
+  if (!queue?.current) return msg.reply(t(g, 'music_no_playing'));
   queue.player.stop();
-  msg.reply('⏭️ Đã bỏ qua bài hiện tại.');
+  msg.reply(t(g, 'music_skipped'));
 }
 
 async function cmdStop(msg) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue) return msg.reply('❌ Bot không ở trong kênh voice.');
+  if (!queue) return msg.reply(t(g, 'music_not_in_voice'));
   queue.songs = [];
   queue.loop = false;
   queue.loopQueue = false;
   queue.player.stop();
   deleteQueue(msg.guild.id);
-  msg.reply('⏹️ Đã dừng nhạc và xóa queue.');
+  msg.reply(t(g, 'music_stopped'));
 }
 
 async function cmdPause(msg) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue?.current) return msg.reply('❌ Không có bài nào đang phát.');
+  if (!queue?.current) return msg.reply(t(g, 'music_no_playing'));
   if (queue.player.state.status === AudioPlayerStatus.Paused) {
-    return msg.reply('⚠️ Nhạc đang bị tạm dừng rồi. Dùng `?resume` để tiếp tục.');
+    return msg.reply(t(g, 'music_already_paused', { prefix: '?' }));
   }
   queue.player.pause();
-  msg.reply('⏸️ Đã tạm dừng.');
+  msg.reply(t(g, 'music_paused'));
 }
 
 async function cmdResume(msg) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue) return msg.reply('❌ Không có bài nào đang phát.');
+  if (!queue) return msg.reply(t(g, 'music_no_playing'));
   if (queue.player.state.status !== AudioPlayerStatus.Paused) {
-    return msg.reply('⚠️ Nhạc không bị tạm dừng.');
+    return msg.reply(t(g, 'music_not_paused'));
   }
   queue.player.unpause();
-  msg.reply('▶️ Tiếp tục phát.');
+  msg.reply(t(g, 'music_resumed'));
 }
 
 async function cmdVolume(msg, args) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue) return msg.reply('❌ Không có bài nào đang phát.');
+  if (!queue) return msg.reply(t(g, 'music_no_playing'));
   const vol = parseInt(args[0]);
-  if (isNaN(vol) || vol < 0 || vol > 200) return msg.reply('❌ Volume từ 0 đến 200.');
+  if (isNaN(vol) || vol < 0 || vol > 200) return msg.reply(t(g, 'music_volume_invalid'));
   queue.volume = vol / 100;
-  if (queue.player.state.resource?.volume) {
-    queue.player.state.resource.volume.setVolume(queue.volume);
-  }
-  msg.reply(`🔊 Volume: **${vol}%**`);
+  if (queue.player.state.resource?.volume) queue.player.state.resource.volume.setVolume(queue.volume);
+  msg.reply(t(g, 'music_volume_set', { vol }));
 }
 
 async function cmdLoop(msg, args) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue) return msg.reply('❌ Không có bài nào đang phát.');
-
+  if (!queue) return msg.reply(t(g, 'music_no_playing'));
   const mode = args[0]?.toLowerCase();
   if (mode === 'queue' || mode === 'q') {
     queue.loopQueue = !queue.loopQueue;
     queue.loop = false;
-    return msg.reply(`🔁 Loop queue: **${queue.loopQueue ? 'BẬT' : 'TẮT'}**`);
+    return msg.reply(t(g, 'music_loop_queue', { state: t(g, queue.loopQueue ? 'music_loop_on' : 'music_loop_off') }));
   }
-  // Mặc định loop bài hiện tại
   queue.loop = !queue.loop;
   queue.loopQueue = false;
-  msg.reply(`🔂 Loop bài hiện tại: **${queue.loop ? 'BẬT' : 'TẮT'}**`);
+  msg.reply(t(g, 'music_loop_song', { state: t(g, queue.loop ? 'music_loop_on' : 'music_loop_off') }));
 }
 
 async function cmdShuffle(msg) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue?.songs.length) return msg.reply('❌ Queue trống.');
+  if (!queue?.songs.length) return msg.reply(t(g, 'music_queue_empty'));
   for (let i = queue.songs.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [queue.songs[i], queue.songs[j]] = [queue.songs[j], queue.songs[i]];
   }
-  msg.reply('🔀 Đã shuffle queue.');
+  msg.reply(t(g, 'music_shuffle_done'));
 }
 
 async function cmdRemove(msg, args) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue?.songs.length) return msg.reply('❌ Queue trống.');
+  if (!queue?.songs.length) return msg.reply(t(g, 'music_queue_empty'));
   const index = parseInt(args[0]) - 1;
   if (isNaN(index) || index < 0 || index >= queue.songs.length) {
-    return msg.reply(`❌ Vị trí không hợp lệ. Queue có **${queue.songs.length}** bài.`);
+    return msg.reply(t(g, 'music_remove_invalid', { count: queue.songs.length }));
   }
   const removed = queue.songs.splice(index, 1)[0];
-  msg.reply(`🗑️ Đã xóa: **${removed.title}**`);
+  msg.reply(t(g, 'music_removed', { title: removed.title }));
 }
 
 async function cmdClear(msg) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue) return msg.reply('❌ Không có queue.');
+  if (!queue) return msg.reply(t(g, 'music_queue_empty'));
   queue.songs = [];
-  msg.reply('🗑️ Đã xóa toàn bộ queue.');
+  msg.reply(t(g, 'music_cleared'));
 }
 
 async function cmdJump(msg, args) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue?.songs.length) return msg.reply('❌ Queue trống.');
+  if (!queue?.songs.length) return msg.reply(t(g, 'music_queue_empty'));
   const index = parseInt(args[0]) - 1;
   if (isNaN(index) || index < 0 || index >= queue.songs.length) {
-    return msg.reply(`❌ Vị trí không hợp lệ. Queue có **${queue.songs.length}** bài.`);
+    return msg.reply(t(g, 'music_jump_invalid', { count: queue.songs.length }));
   }
   queue.songs = queue.songs.slice(index);
   queue.player.stop();
-  msg.reply(`⏩ Nhảy đến bài #${index + 1}: **${queue.songs[0]?.title}**`);
+  msg.reply(t(g, 'music_jumped', { pos: index + 1, title: queue.songs[0]?.title }));
 }
 
 async function cmdQueue(msg) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue?.current && !queue?.songs.length) return msg.reply('❌ Queue trống.');
+  if (!queue?.current && !queue?.songs.length) return msg.reply(t(g, 'music_queue_empty'));
 
   const lines = [];
-  if (queue.current) {
-    lines.push(`▶️ **Đang phát:** ${queue.current.title} \`[${queue.current.duration}]\``);
-  }
+  if (queue.current) lines.push(t(g, 'music_queue_header', { title: queue.current.title, duration: queue.current.duration }));
   if (queue.songs.length) {
     lines.push('');
-    lines.push('**Queue:**');
+    lines.push(t(g, 'music_queue_list'));
     queue.songs.slice(0, 10).forEach((s, i) => {
       lines.push(`\`${i + 1}.\` ${s.title} \`[${s.duration}]\` — <@${s.requestedBy}>`);
     });
-    if (queue.songs.length > 10) lines.push(`... và **${queue.songs.length - 10}** bài nữa`);
+    if (queue.songs.length > 10) lines.push(t(g, 'music_queue_more', { count: queue.songs.length - 10 }));
   } else {
-    lines.push('📭 Không có bài nào trong queue.');
+    lines.push(t(g, 'music_queue_none'));
   }
-
   const flags = [];
-  if (queue.loop) flags.push('🔂 Loop bài');
-  if (queue.loopQueue) flags.push('🔁 Loop queue');
+  if (queue.loop) flags.push(t(g, 'music_loop_song', { state: t(g, 'music_loop_on') }));
+  if (queue.loopQueue) flags.push(t(g, 'music_loop_queue', { state: t(g, 'music_loop_on') }));
   if (flags.length) lines.push('\n' + flags.join(' | '));
-
   msg.reply(lines.join('\n'));
 }
 
 async function cmdNowPlaying(msg) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue?.current) return msg.reply('❌ Không có bài nào đang phát.');
+  if (!queue?.current) return msg.reply(t(g, 'music_no_playing'));
   const s = queue.current;
-  msg.reply(`🎵 **Đang phát:** ${s.title} \`[${s.duration}]\`${s.requestedBy ? ` — <@${s.requestedBy}>` : ''}`);
+  msg.reply(t(g, 'music_now_playing', { title: s.title, duration: s.duration }) + (s.requestedBy ? ` — <@${s.requestedBy}>` : ''));
 }
 
 async function cmdLeave(msg) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-  if (!queue) return msg.reply('❌ Bot không ở trong kênh voice.');
+  if (!queue) return msg.reply(t(g, 'music_not_in_voice'));
   deleteQueue(msg.guild.id);
-  msg.reply('👋 Đã rời kênh voice.');
+  msg.reply(t(g, 'music_left'));
 }
 
 async function cmdLyrics(msg, args) {
+  const g = gid(msg);
   const queue = getQueue(msg.guild.id);
-
   const title = args.length ? args.join(' ') : queue?.current?.title;
-  if (!title) return msg.reply('❌ Không có bài nào đang phát. Dùng `?lyrics <tên bài>` để tìm.');
+  if (!title) return msg.reply(t(g, 'lyrics_no_playing', { prefix: '?' }));
 
-  const searching = await msg.reply(`🔍 Đang tìm lời bài: **${title}**...`);
+  const searching = await msg.reply(t(g, 'lyrics_searching', { title }));
   const result = await getLyrics(title);
-
-  if (!result) {
-    return searching.edit(`❌ Không tìm thấy lời bài **${title}**.`);
-  }
+  if (!result) return searching.edit(t(g, 'lyrics_not_found', { title }));
 
   const { EmbedBuilder } = require('discord.js');
   const chunks = splitLyrics(result.lyrics, 4000);
-
-  const makeEmbed = (lyricsChunk, page, total) =>
+  const makeEmbed = (chunk, page, total) =>
     new EmbedBuilder()
       .setColor(0x5865F2)
       .setTitle(`📜 ${result.artist} — ${result.song}`)
-      .setDescription('```\n' + lyricsChunk + '\n```')
-      .setFooter({ text: total > 1 ? `Trang ${page}/${total}` : 'MiraiBot Lyrics' });
+      .setDescription('```\n' + chunk + '\n```')
+      .setFooter({ text: total > 1 ? t(g, 'lyrics_footer', { page, total }) : t(g, 'lyrics_footer_single') });
 
   const totalPages = chunks.length;
   await searching.edit({ content: null, embeds: [makeEmbed(chunks[0], 1, totalPages)] });
-
   for (let i = 1; i < chunks.length; i++) {
     await msg.channel.send({ embeds: [makeEmbed(chunks[i], i + 1, totalPages)] });
   }

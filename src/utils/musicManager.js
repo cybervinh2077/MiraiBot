@@ -81,8 +81,9 @@ function clearIdleTimer(queue) {
 
 function startIdleTimer(queue) {
   clearIdleTimer(queue);
+  const { t } = require('./i18n');
   queue.idleTimer = setTimeout(() => {
-    queue.textChannel.send('⏹️ Không có bài nào được thêm trong 1 phút. Bot đã rời kênh voice.');
+    queue.textChannel.send(t(queue.guildId, 'music_idle'));
     deleteQueue(queue.guildId);
   }, 60 * 1000);
 }
@@ -286,7 +287,6 @@ async function playSong(queue, song) {
   try {
     const audioUrl = await getAudioUrl(song.url);
     console.log('Audio URL:', audioUrl?.slice(0, 80));
-
     const ffmpeg = spawn(ffmpegPath, [
       '-reconnect', '1',
       '-reconnect_streamed', '1',
@@ -322,8 +322,9 @@ async function playSong(queue, song) {
 
     queue.playerMessage = await queue.textChannel.send(buildPlayerUI(song));
   } catch (err) {
+    const { t } = require('./i18n');
     console.error('Play error:', err.message);
-    await queue.textChannel.send(`❌ Không thể phát **${song.title}** (có thể do bản quyền hoặc bị chặn), bỏ qua...`);
+    await queue.textChannel.send(t(queue.guildId, 'music_play_error', { title: song.title }));
     playNext(queue);
   }
 }
@@ -334,9 +335,10 @@ function playNext(queue) {
 
   const next = queue.songs.shift();
   if (!next) {
+    const { t } = require('./i18n');
     queue.current = null;
     startIdleTimer(queue);
-    queue.textChannel.send('✅ Queue đã hết bài. Bot sẽ tự rời sau 1 phút nếu không có bài mới.');
+    queue.textChannel.send(t(queue.guildId, 'music_queue_end'));
     return;
   }
   playSong(queue, next);

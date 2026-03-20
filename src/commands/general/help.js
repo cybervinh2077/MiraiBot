@@ -1,41 +1,40 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { getPrefix } = require('../../utils/guildAuth');
+const { t } = require('../../utils/i18n');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('help')
     .setDescription('Hiện danh sách lệnh MiraiBot'),
   async execute(interaction) {
-    const prefix = getPrefix(interaction.guild.id);
+    const guildId = interaction.guild.id;
+    const prefix = getPrefix(guildId);
     const helpText = [
-      '📖 **Danh sách lệnh MiraiBot**',
+      '📖 **MiraiBot Commands**',
       '',
-      '**🔐 Tài khoản** — `/login` `/logout` `/info` `/prefix`',
+      '**🔐 Account**',
+      `\`${prefix}login\` \`/login\` | \`${prefix}logout\` \`/logout\``,
+      `\`${prefix}info\` \`/info\` | \`${prefix}prefix\` \`/prefix\``,
+      `\`/lang\` — Change language (vn/en/jp)`,
       '',
-      '**🎵 Nhạc**',
-      `\`${prefix}play\` \`/play\` — Phát nhạc hoặc thêm vào queue`,
-      `\`${prefix}skip\` \`/skip\` — Bỏ qua bài hiện tại`,
-      `\`${prefix}stop\` \`/stop\` — Dừng nhạc và xóa queue`,
-      `\`${prefix}pause\` \`/pause\` — Tạm dừng`,
-      `\`${prefix}resume\` \`/resume\` — Tiếp tục phát`,
-      `\`${prefix}queue\` \`/queue\` — Xem danh sách queue`,
-      `\`${prefix}nowplaying\` \`/nowplaying\` — Xem bài đang phát`,
-      `\`${prefix}volume <0-200>\` \`/volume\` — Chỉnh âm lượng`,
-      `\`${prefix}loop\` \`/loop\` — Loop bài / queue`,
-      `\`${prefix}shuffle\` \`/shuffle\` — Shuffle queue`,
-      `\`${prefix}lyrics\` \`/lyrics\` — Lời bài hát`,
-      `\`${prefix}leave\` \`/leave\` — Bot rời kênh voice`,
+      '**🎵 Music**',
+      `\`${prefix}play\` \`/play\` | \`${prefix}skip\` \`/skip\` | \`${prefix}stop\` \`/stop\``,
+      `\`${prefix}pause\` \`/pause\` | \`${prefix}resume\` \`/resume\``,
+      `\`${prefix}queue\` \`/queue\` | \`${prefix}nowplaying\` \`/nowplaying\``,
+      `\`${prefix}volume\` \`/volume\` | \`${prefix}loop\` \`/loop\` | \`${prefix}shuffle\` \`/shuffle\``,
+      `\`${prefix}lyrics\` \`/lyrics\` | \`${prefix}leave\` \`/leave\``,
       '',
-      '**🛠️ Khác** — `/ping` `/help`',
+      '**🎭 Fun** — `/hug` `/kiss` `/cuddle`',
       '',
-      '**🎲 D&D** — `/start-campaign` `/assign-char` `/party-status` `/action` và nhiều hơn',
+      '**🛠️ Other** — `/ping` `/help`',
+      '',
+      '**🎲 D&D** — `/start-campaign` `/assign-char` `/action` and more',
     ].join('\n');
 
     try {
       await interaction.user.send(helpText);
-      await interaction.reply({ content: '📬 Đã gửi danh sách lệnh vào DM của bạn!', ephemeral: true });
+      await interaction.reply({ content: t(guildId, 'help_dm_sent'), ephemeral: true });
     } catch {
-      // User tắt DM
       await interaction.reply({ content: helpText, ephemeral: true });
     }
   },
