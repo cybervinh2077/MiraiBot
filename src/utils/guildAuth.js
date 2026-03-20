@@ -73,15 +73,16 @@ function clearGuildAuth(guildId) {
   saveSessions(guildSessions);
 }
 
-// Prefix riêng theo guild, lưu trong Map riêng
-const guildPrefixes = new Map();
-
+// Prefix riêng theo guild, lưu persistent vào sessions file
 function getPrefix(guildId) {
-  return guildPrefixes.get(guildId) || '?';
+  const session = guildSessions.get(guildId);
+  return session?.prefix || '?';
 }
 
 function setPrefix(guildId, prefix) {
-  guildPrefixes.set(guildId, prefix);
+  const session = guildSessions.get(guildId) || {};
+  guildSessions.set(guildId, { ...session, prefix });
+  saveSessions(guildSessions);
 }
 
 module.exports = { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, setPrefix };
