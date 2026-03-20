@@ -84,22 +84,8 @@ async function getVideoById(videoId) {
     return null;
   }
   if (!data.items?.length) {
-    console.warn('getVideoById: no items for videoId:', videoId, '— trying search fallback');
-    // Fallback: search bằng videoId để lấy thông tin
-    const searchParams = new URLSearchParams({
-      part: 'snippet', q: videoId, type: 'video', maxResults: 1, key: YT_API_KEY,
-    });
-    const searchRes = await fetch(`${YT_SEARCH_URL}?${searchParams}`);
-    const searchData = await searchRes.json();
-    if (!searchData.items?.length) return null;
-    const item = searchData.items[0];
-    return {
-      title: item.snippet.title,
-      url: `https://www.youtube.com/watch?v=${item.id.videoId}`,
-      duration: '??:??',
-      thumbnail: item.snippet.thumbnails?.default?.url,
-      requestedBy: null,
-    };
+    console.warn('getVideoById: no items for videoId:', videoId);
+    return null;
   }
   const item = data.items[0];
   return {
@@ -286,24 +272,7 @@ async function playSong(queue, song) {
     queue.playerMessage = await queue.textChannel.send(buildPlayerUI(song));
   } catch (err) {
     console.error('Play error:', err.message);
-
-    // Thử tìm video thay thế cùng tên
-    try {
-      console.log('Trying alternative video for:', song.title);
-      const results = await searchYoutubeList(song.title);
-      // Bỏ qua video hiện tại, thử video tiếp theo
-      const alt = results.find(r => r.videoId !== song.url.match(/v=([^&]+)/)?.[1]);
-      if (alt) {
-        const altSong = await getVideoById(alt.videoId);
-        if (altSong) {
-          altSong.requestedBy = song.requestedBy;
-          await queue.textChannel.send(`⚠️ **${song.title}** bị chặn, đang thử phiên bản khác...`);
-          return playSong(queue, altSong);
-        }
-      }
-    } catch {}
-
-    await queue.textChannel.send(`❌ Không thể phát **${song.title}** (có thể do bản quyền), bỏ qua...`);
+    await queue.textChannel.send(`❌ Không thể phát **${song.title}** (có thể do bản quyền hoặc bị chặn), bỏ qua...`);
     playNext(queue);
   }
 }
