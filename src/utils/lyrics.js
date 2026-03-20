@@ -1,6 +1,5 @@
 const GENIUS_TOKEN = process.env.GENIUS_TOKEN;
 
-// Parse "Artist - Song" từ YouTube title
 function parseTitle(title) {
   const parts = title.split(' - ');
   let artist, song;
@@ -15,7 +14,7 @@ function parseTitle(title) {
   return { artist, song };
 }
 
-// Genius API search
+// Genius search → trả về song id + info
 async function searchGenius(query) {
   if (!GENIUS_TOKEN) return null;
   try {
@@ -26,57 +25,49 @@ async function searchGenius(query) {
     const data = await res.json();
     const hit = data.response?.hits?.[0]?.result;
     if (!hit) return null;
-    return {
-      title: hit.title,
-      artist: hit.primary_artist.name,
-      url: hit.url,
-    };
+    return { id: hit.id, title: hit.title, artist: hit.primary_artist.name };
   } catch {
     return null;
   }
 }
 
-// Scrape lyrics từ Genius page
-async function scrapeGeniusLyrics(url) {
-  try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-    });
-    const html = await res.text();
-
-    // Genius lưu lyrics trong các div data-lyrics-container
-    const matches = [...html.matchAll(/data-lyrics-container="true"[^>]*>([\s\S]*?)<\/div>/g)];
-    if (!matches.length) return null;
-
-    let lyrics = matches
-      .map(m => m[1])
-      .join('\n')
-      // Chuyển <br> thành newline
-      .replace(/<br\s*\/?>/gi, '\n')
-      // Xóa tất cả HTML tags còn lại
-      .replace(/<[^>]+>/g, '')
-      // Decode HTML entities
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#x27;/g, "'")
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .trim();
-
-    return lyrics || null;
-  } catch {
-    return null;
-  }
-}
-
-// Fallback: lyrics.ovh
+// Lấy lyrics qua Genius song detail API (có embed lyrics trong một số trường hợp)
+// Fallback: dùng lyrics.ovh vì Genius API không trả lyrics trực tiếp ở free tier
 async function lyricsOvh(artist, song) {
   try {
+    const query = artist ? `${artist} ${song}` : song;
+    // Thử với artist + song
+    if (artist) {
+      const res = await fetch(
+        `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(song)}`
+      );
+      const data = await res.json();
+      if (data.lyrics) return data.lyrics;
+    }
+    // Thử chỉ với song title
+    const res2 = await fetch(
+      `https://api.lyrics.ovh/v1/${encodeURIComponent(song)}/${encodeURIComponent(song)}`
+    );
+    const data2 = await res2.json();
+    return data2.lyrics || null;
+  } catch {
+    return null;
+  }
+}
+
+// lrclib.net - API miễn phí, không cần key, có lyrics synced
+async function lrclibSearch(artist, song) {
+  try {
+    const query = artist ? `${artist} ${song}` : song;
     const res = await fetch(
-      `https://api.lyrics.ovh/v1/${encodeURIComponent(artist || song)}/${encodeURIComponent(song)}`
+      `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`
     );
     const data = await res.json();
-    return data.lyrics || null;
+    if (!data?.length) return null;
+    // Ưu tiên bài có plainLyrics
+    const hit = data.find(d => d.plainLyrics) || data[0];
+    if (!hit?.plainLyrics) return null;
+    return { lyrics: hit.plainLyrics, artist: hit.artistName, song: hit.trackName };
   } catch {
     return null;
   }
@@ -84,24 +75,24 @@ async function lyricsOvh(artist, song) {
 
 async function getLyrics(title) {
   const { artist, song } = parseTitle(title);
-  const query = artist ? `${artist} ${song}` : song;
 
-  // 1. Thử Genius trước
+  // 1. Thử lrclib trước (miễn phí, không cần key, ổn định)
+  const lrcResult = await lrclibSearch(artist, song);
+  if (lrcResult) return lrcResult;
+
+  // 2. Thử Genius search + lyrics.ovh với tên chính xác từ Genius
   if (GENIUS_TOKEN) {
+    const query = artist ? `${artist} ${song}` : song;
     const hit = await searchGenius(query);
     if (hit) {
-      const lyrics = await scrapeGeniusLyrics(hit.url);
-      if (lyrics) {
-        return { lyrics, artist: hit.artist, song: hit.title };
-      }
+      const ovhLyrics = await lyricsOvh(hit.artist, hit.title);
+      if (ovhLyrics) return { lyrics: ovhLyrics, artist: hit.artist, song: hit.title };
     }
   }
 
-  // 2. Fallback sang lyrics.ovh
+  // 3. Fallback lyrics.ovh với title gốc
   const ovhLyrics = await lyricsOvh(artist, song);
-  if (ovhLyrics) {
-    return { lyrics: ovhLyrics, artist, song };
-  }
+  if (ovhLyrics) return { lyrics: ovhLyrics, artist, song };
 
   return null;
 }
