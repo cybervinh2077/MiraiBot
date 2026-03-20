@@ -44,19 +44,6 @@ async function fetchDog() {
   return data.message || null;
 }
 
-// ─── Độ Mixi image pool ───────────────────────────────────────────────────────
-// Ảnh streamer Độ Mixi (MixiGaming) — thêm URL trực tiếp vào đây
-// Gợi ý: lấy từ fanpage, kenh14, YouTube thumbnail, v.v.
-const MIXI_IMAGES = [
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/20190411_%C4%90%E1%BB%99_Mixi.jpg/400px-20190411_%C4%90%E1%BB%99_Mixi.jpg',
-  // Thêm URL ảnh Độ Mixi vào đây:
-  // 'https://...',
-  // 'https://...',
-];
-
-function getMixiImage() {
-  return MIXI_IMAGES[Math.floor(Math.random() * MIXI_IMAGES.length)];
-}
 
 async function fetchMeme() {
   // meme-api.com — free, no key, pulls from Reddit
@@ -135,18 +122,6 @@ module.exports = {
           });
         }
         if (sub === 'dog') {
-          const isMixi = Math.random() < 0.5;
-          if (isMixi) {
-            const url = getMixiImage();
-            return interaction.editReply({
-              embeds: [new EmbedBuilder()
-                .setTitle('🎮 Độ Mixi xuất hiện!')
-                .setDescription('*Bạn đã gặp streamer huyền thoại Độ Mixi!* 🎉')
-                .setImage(url)
-                .setColor(0xff6b35)
-                .setFooter({ text: '50% chance • MixiGaming' })],
-            });
-          }
           const url = await fetchDog();
           return interaction.editReply({
             embeds: [new EmbedBuilder()
