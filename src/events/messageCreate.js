@@ -123,8 +123,59 @@ module.exports = {
 
     // Lệnh ?ping
     if (msg.content === '?ping') {
+      const { execSync } = require('child_process');
+      const os = require('os');
+
       const latency = Date.now() - msg.createdTimestamp;
-      return msg.reply(`🏓 Pong! Độ trễ: **${latency}ms** | WebSocket: **${msg.client.ws.ping}ms**`);
+
+      // Commit hiện tại
+      let commitHash = 'N/A', commitMsg = 'N/A';
+      try {
+        commitHash = execSync('git rev-parse --short HEAD', { cwd: process.cwd() }).toString().trim();
+        commitMsg = execSync('git log -1 --pretty=%s', { cwd: process.cwd() }).toString().trim();
+      } catch {}
+
+      // Uptime
+      const uptimeSec = Math.floor(process.uptime());
+      const uh = Math.floor(uptimeSec / 3600);
+      const um = Math.floor((uptimeSec % 3600) / 60);
+      const us = uptimeSec % 60;
+      const uptime = `${uh}h ${um}m ${us}s`;
+
+      // CPU & RAM
+      const cpus = os.cpus();
+      const cpuModel = cpus[0]?.model?.trim() || 'N/A';
+      const totalMem = (os.totalmem() / 1024 / 1024).toFixed(0);
+      const freeMem = (os.freemem() / 1024 / 1024).toFixed(0);
+      const usedMem = (totalMem - freeMem).toFixed(0);
+
+      // CPU temp (Linux only)
+      let cpuTemp = 'N/A';
+      try {
+        const raw = execSync('cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null').toString().trim();
+        cpuTemp = (parseInt(raw) / 1000).toFixed(1) + '°C';
+      } catch {}
+
+      // Load average
+      const [load1, load5] = os.loadavg();
+
+      return msg.reply(
+        `🏓 **Pong!**\n` +
+        `\`\`\`\n` +
+        `📡 Độ trễ API  : ${latency}ms\n` +
+        `🔌 WebSocket   : ${msg.client.ws.ping}ms\n` +
+        `\n` +
+        `📦 Phiên bản triển khai\n` +
+        `   Commit : ${commitHash}\n` +
+        `   Nội dung: ${commitMsg.slice(0, 50)}\n` +
+        `\n` +
+        `⏱️  Uptime      : ${uptime}\n` +
+        `🖥️  CPU         : ${cpuModel}\n` +
+        `🌡️  Nhiệt độ    : ${cpuTemp}\n` +
+        `📊 Load avg    : ${load1.toFixed(2)} / ${load5.toFixed(2)}\n` +
+        `💾 RAM         : ${usedMem}MB / ${totalMem}MB\n` +
+        `\`\`\``
+      );
     }
     if (msg.content === '?help') {
       return msg.reply([
