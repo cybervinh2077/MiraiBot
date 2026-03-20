@@ -86,7 +86,7 @@ async function cmdPlay(msg, args, voiceChannel) {
   // Emoji số
   const numEmoji = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
 
-  // Embed hiển thị thumbnails
+  // Embed hiển thị danh sách + thumbnail bài đầu tiên
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
     .setTitle(`🎵 Kết quả tìm kiếm: ${query}`)
@@ -95,8 +95,8 @@ async function cmdPlay(msg, args, voiceChannel) {
         `${numEmoji[i]} **[${r.title}](https://youtu.be/${r.videoId})**\n└ ${r.channel}`
       ).join('\n\n')
     )
-    .setThumbnail(`https://i.ytimg.com/vi/${results[0].videoId}/mqdefault.jpg`)
-    .setFooter({ text: `Tìm thấy trong ${searchTime}ms` });
+    .setImage(`https://i.ytimg.com/vi/${results[0].videoId}/mqdefault.jpg`)
+    .setFooter({ text: `Tìm thấy trong ${searchTime}ms • Thumbnail: bài #1` });
 
   const select = new StringSelectMenuBuilder()
     .setCustomId(`music_select_${msg.author.id}`)
