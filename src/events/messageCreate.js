@@ -92,6 +92,7 @@ module.exports = {
               setGuildAuth(guildId, {
                 discordUserId: msg.author.id,
                 discordUsername: msg.author.username,
+                miraiUsername: result.username || 'Không rõ',
               });
               const miraiUsername = result.username || 'Không rõ';
               await msg.reply(
@@ -125,8 +126,6 @@ module.exports = {
       const latency = Date.now() - msg.createdTimestamp;
       return msg.reply(`🏓 Pong! Độ trễ: **${latency}ms** | WebSocket: **${msg.client.ws.ping}ms**`);
     }
-
-    // Lệnh ?help
     if (msg.content === '?help') {
       return msg.reply([
         '📖 **Danh sách lệnh MiraiBot**',
@@ -193,12 +192,6 @@ module.exports = {
 
     // Lệnh ?info
     if (msg.content === '?info') {
-      const latency = Date.now() - msg.createdTimestamp;
-      return msg.reply(`🏓 Pong! Độ trễ: **${latency}ms** | WebSocket: **${msg.client.ws.ping}ms**`);
-    }
-
-    // Lệnh ?info
-    if (msg.content === '?info') {
       const session = getGuildAuth(guildId);
       const linkedAt = new Date(session.linkedAt);
       const now = new Date();
@@ -214,9 +207,10 @@ module.exports = {
       duration += `${minutes} phút`;
 
       return msg.reply(
-        `📋 **Thông tin tài khoản MyMirai**\n` +
-        `👤 Discord  : **${session.discordUsername}**\n` +
-        `🕐 Đăng nhập lúc : **${linkedAt.toLocaleString('vi-VN')}**\n` +
+        `📋 **Thông tin tài khoản**\n` +
+        `👤 Discord: **${session.discordUsername}**\n` +
+        `🌐 MyMirai: **${session.miraiUsername || 'Không rõ'}**\n` +
+        `🕐 Đăng nhập lúc: **${linkedAt.toLocaleString('vi-VN')}**\n` +
         `⏱️ Thời gian đã đăng nhập: **${duration}**`
       );
     }

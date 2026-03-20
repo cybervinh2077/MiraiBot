@@ -8,6 +8,11 @@ const {
 } = require('@discordjs/voice');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 const { exec } = require('yt-dlp-exec');
+
+// Dùng system yt-dlp nếu có (luôn mới hơn bản trong node_modules)
+const ytDlpExec = process.env.YTDLP_PATH
+  ? require('yt-dlp-exec').create(process.env.YTDLP_PATH)
+  : exec;
 const { spawn } = require('child_process');
 
 // Ưu tiên system ffmpeg (cần thiết trên ARM như Orange Pi)
