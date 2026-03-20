@@ -355,4 +355,55 @@ function splitLyrics(lyrics, maxLen) {
   return chunks;
 }
 
-module.exports = { handleMusic };
+async function handleMusicSlash(interaction, command) {
+  const voiceChannel = interaction.member?.voice?.channel;
+  const msg = {
+    guild: interaction.guild,
+    member: interaction.member,
+    channel: interaction.channel,
+    author: interaction.user,
+    reply: (content) => {
+      if (typeof content === 'string') content = { content };
+      if (interaction.replied || interaction.deferred) return interaction.followUp(content);
+      return interaction.reply(content);
+    },
+  };
+
+  // Defer cho các lệnh cần thời gian
+  if (['play', 'lyrics'].includes(command)) {
+    await interaction.deferReply();
+    msg.reply = (content) => {
+      if (typeof content === 'string') content = { content };
+      return interaction.editReply(content);
+    };
+  }
+
+  switch (command) {
+    case 'play': {
+      const query = interaction.options.getString('query');
+      return cmdPlay(msg, [query], voiceChannel);
+    }
+    case 'skip': return cmdSkip(msg);
+    case 'stop': return cmdStop(msg);
+    case 'pause': return cmdPause(msg);
+    case 'resume': return cmdResume(msg);
+    case 'queue': return cmdQueue(msg);
+    case 'nowplaying': return cmdNowPlaying(msg);
+    case 'volume': {
+      const level = interaction.options.getInteger('level');
+      return cmdVolume(msg, [level]);
+    }
+    case 'loop': {
+      const mode = interaction.options.getString('mode') || '';
+      return cmdLoop(msg, [mode]);
+    }
+    case 'shuffle': return cmdShuffle(msg);
+    case 'lyrics': {
+      const title = interaction.options.getString('title') || '';
+      return cmdLyrics(msg, title ? [title] : []);
+    }
+    case 'leave': return cmdLeave(msg);
+  }
+}
+
+module.exports = { handleMusic, handleMusicSlash };
