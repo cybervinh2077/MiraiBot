@@ -23,6 +23,8 @@ module.exports = {
     if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
     const { customId, guild, member } = interaction;
     if (!customId.startsWith('music_')) return;
+    // music_select_<userId> là search result selector, handled by collector in musicHandler
+    if (customId.startsWith('music_select_')) return;
 
     const queue = getQueue(guild.id);
     if (!queue) return interaction.reply({ content: '❌ Không có nhạc đang phát.', ephemeral: true });
@@ -35,10 +37,12 @@ module.exports = {
 
       queue.filter = selectedFilter;
 
-      // Restart current song with new filter
+      // Restart current song with new filter applied
       if (queue.current) {
+        const current = queue.current;
+        queue.songs.unshift(current);
+        queue.current = null;
         queue.player.stop();
-        queue.songs.unshift(queue.current);
       }
       return;
     }
