@@ -1,22 +1,26 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { getPrefix } = require('../../utils/guildAuth');
 const { t } = require('../../utils/i18n');
-const { buildHelpEmbed } = require('./helpBuilder');
+const { buildHelpEmbeds } = require('./helpBuilder');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('help')
-    .setDescription('Hiện danh sách lệnh MiraiBot'),
+    .setDescription('Hiện toàn bộ hướng dẫn sử dụng MiraiBot'),
   async execute(interaction) {
     const guildId = interaction.guild.id;
-    const prefix = getPrefix(guildId);
-    const embed = buildHelpEmbed(prefix, guildId);
+    const embeds  = buildHelpEmbeds();
 
     try {
-      await interaction.user.send({ embeds: [embed] });
+      // Discord DM giới hạn 10 embeds/message — chia 2 lần
+      await interaction.user.send({ embeds: embeds.slice(0, 4) });
+      await interaction.user.send({ embeds: embeds.slice(4) });
       await interaction.reply({ content: t(guildId, 'help_dm_sent'), ephemeral: true });
     } catch {
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      // DM bị tắt — gửi từng embed vào channel (ephemeral)
+      await interaction.reply({ embeds: [embeds[0]], ephemeral: true });
+      for (const embed of embeds.slice(1)) {
+        await interaction.followUp({ embeds: [embed], ephemeral: true });
+      }
     }
   },
 };
