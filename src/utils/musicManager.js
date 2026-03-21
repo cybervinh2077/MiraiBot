@@ -131,6 +131,66 @@ function extractVideoId(url) {
   return match ? match[1] : null;
 }
 
+function extractPlaylistId(url) {
+  const match = url.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : null;
+}
+
+// Fetch tất cả video IDs trong playlist (có pagination, tối đa 200 bài)
+async function getPlaylistItems(playlistId, maxItems = 200) {
+  const YT_PLAYLIST_URL = 'https://www.googleapis.com/youtube/v3/playlistItems';
+  const videoIds = [];
+  let pageToken = null;
+
+  do {
+    const params = new URLSearchParams({
+      part: 'contentDetails',
+      playlistId,
+      maxResults: 50,
+      key: YT_API_KEY,
+      ...(pageToken ? { pageToken } : {}),
+    });
+    const res = await fetch(`${YT_PLAYLIST_URL}?${params}`);
+    const data = await res.json();
+    if (data.error || !data.items?.length) break;
+
+    for (const item of data.items) {
+      const vid = item.contentDetails?.videoId;
+      if (vid) videoIds.push(vid);
+      if (videoIds.length >= maxItems) break;
+    }
+    pageToken = data.nextPageToken || null;
+  } while (pageToken && videoIds.length < maxItems);
+
+  return videoIds;
+}
+
+// Fetch metadata cho nhiều videoIds cùng lúc (batch 50)
+async function getVideosByIds(videoIds) {
+  const results = [];
+  for (let i = 0; i < videoIds.length; i += 50) {
+    const batch = videoIds.slice(i, i + 50);
+    const params = new URLSearchParams({
+      part: 'snippet,contentDetails',
+      id: batch.join(','),
+      key: YT_API_KEY,
+    });
+    const res = await fetch(`${YT_VIDEO_URL}?${params}`);
+    const data = await res.json();
+    if (!data.items?.length) continue;
+    for (const item of data.items) {
+      results.push({
+        title: item.snippet.title,
+        url: `https://www.youtube.com/watch?v=${item.id}`,
+        duration: parseDuration(item.contentDetails.duration),
+        thumbnail: item.snippet.thumbnails?.default?.url,
+        requestedBy: null,
+      });
+    }
+  }
+  return results;
+}
+
 async function getVideoById(videoId) {
   const params = new URLSearchParams({
     part: 'snippet,contentDetails',
@@ -448,4 +508,4 @@ async function connect(queue) {
   });
 }
 
-module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl, AUDIO_FILTERS };
+module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, getVideosByIds, getPlaylistItems, extractPlaylistId, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl, AUDIO_FILTERS };

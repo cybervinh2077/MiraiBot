@@ -7,6 +7,9 @@ const {
   searchYoutube,
   searchYoutubeList,
   getVideoById,
+  getVideosByIds,
+  getPlaylistItems,
+  extractPlaylistId,
   clearIdleTimer,
 } = require('../utils/musicManager');
 const { getLyrics } = require('../utils/lyrics');
@@ -69,8 +72,14 @@ async function cmdPlay(msg, args, voiceChannel) {
   if (!args.length) return msg.reply(t(g, 'music_no_song'));
 
   const query = args.join(' ');
-  const isUrl = query.includes('youtube.com/watch') || query.includes('youtu.be/');
-  if (isUrl) return playDirect(msg, query, voiceChannel);
+  const isUrl = query.includes('youtube.com/watch') || query.includes('youtu.be/') || query.includes('youtube.com/playlist');
+
+  if (isUrl) {
+    // Kiểm tra có phải playlist không
+    const playlistId = extractPlaylistId(query);
+    if (playlistId) return playPlaylist(msg, query, playlistId, voiceChannel);
+    return playDirect(msg, query, voiceChannel);
+  }
 
   const searching = await msg.reply(t(g, 'music_searching', { query }));
   const startTime = Date.now();
@@ -138,6 +147,54 @@ async function playDirect(msg, url, voiceChannel) {
   if (!song) return searching.edit(t(g, 'music_load_fail'));
   song.requestedBy = msg.author.id;
   await addToQueue(msg, song, voiceChannel, searching);
+}
+
+async function playPlaylist(msg, url, playlistId, voiceChannel) {
+  const g = gid(msg);
+  const statusMsg = await msg.reply(`⏳ Đang tải playlist...`);
+
+  let videoIds;
+  try {
+    videoIds = await getPlaylistItems(playlistId);
+  } catch (err) {
+    console.error('Playlist fetch error:', err);
+    return statusMsg.edit('❌ Không thể tải playlist. Kiểm tra lại link hoặc playlist có thể là private.');
+  }
+
+  if (!videoIds.length) return statusMsg.edit('❌ Playlist trống hoặc không tìm thấy.');
+
+  // Lấy metadata bài đầu tiên ngay
+  const firstSong = await getVideoById(videoIds[0]).catch(() => null);
+  if (!firstSong) return statusMsg.edit('❌ Không thể tải bài đầu tiên trong playlist.');
+  firstSong.requestedBy = msg.author.id;
+
+  await statusMsg.edit(`✅ Tìm thấy **${videoIds.length}** bài trong playlist. Đang thêm vào queue...`);
+
+  // Add bài đầu vào queue và bắt đầu phát
+  await addToQueue(msg, firstSong, voiceChannel, statusMsg);
+
+  // Fetch metadata các bài còn lại trong background (batch)
+  if (videoIds.length > 1) {
+    const remainingIds = videoIds.slice(1);
+    setImmediate(async () => {
+      try {
+        const songs = await getVideosByIds(remainingIds);
+        const queue = getQueue(msg.guild.id);
+        if (!queue) return; // Queue đã bị xóa
+
+        for (const song of songs) {
+          song.requestedBy = msg.author.id;
+          queue.songs.push(song);
+        }
+
+        // Thông báo sau khi load xong
+        msg.channel.send(`📋 Đã thêm **${songs.length}** bài từ playlist vào queue.`).catch(() => {});
+      } catch (err) {
+        console.error('Playlist background load error:', err);
+        msg.channel.send('⚠️ Một số bài trong playlist không thể tải.').catch(() => {});
+      }
+    });
+  }
 }
 
 async function addToQueue(msg, song, voiceChannel, replyMsg) {
