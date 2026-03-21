@@ -6,7 +6,7 @@ const {
   VoiceConnectionStatus,
   entersState,
 } = require('@discordjs/voice');
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { exec } = require('yt-dlp-exec');
 const { spawn } = require('child_process');
 
@@ -26,6 +26,43 @@ try {
 const YT_API_KEY = process.env.YOUTUBE_API_KEY;
 const YT_SEARCH_URL = 'https://www.googleapis.com/youtube/v3/search';
 const YT_VIDEO_URL = 'https://www.googleapis.com/youtube/v3/videos';
+
+// ─── Audio Filters ────────────────────────────────────────────────────────────
+const AUDIO_FILTERS = {
+  // Group 1 — Nightcore / Daycore / Vibe
+  default:              { label: 'Default',                  emoji: '👌', ffmpeg: null },
+  nightcore_gaming:     { label: 'Nightcore Gaming',         emoji: '🎮', ffmpeg: 'asetrate=48000*1.25,aresample=48000,atempo=1.06' },
+  nightcore_crush:      { label: 'Nightcore Crush',          emoji: '💜', ffmpeg: 'asetrate=48000*1.22,aresample=48000,atempo=1.04' },
+  nightcore_big_sister: { label: 'Nightcore Big Sister',     emoji: '👧', ffmpeg: 'asetrate=48000*1.20,aresample=48000,atempo=1.05' },
+  nightcore_little_sister: { label: 'Nightcore Little Sister', emoji: '🧒', ffmpeg: 'asetrate=48000*1.18,aresample=48000,atempo=1.03' },
+  daycore_gaming:       { label: 'Daycore Gaming',           emoji: '🌤️', ffmpeg: 'asetrate=48000*0.80,aresample=48000,atempo=0.95' },
+  aliens_mexico:        { label: 'Aliens Invading Mexico',   emoji: '👽', ffmpeg: 'asetrate=48000*1.30,aresample=48000,atempo=1.10,vibrato=f=6:d=0.5' },
+  south_jakarta:        { label: 'South Jakarta Chipmunk',   emoji: '🐿️', ffmpeg: 'asetrate=48000*1.40,aresample=48000,atempo=0.90' },
+  tokyo_karaoke:        { label: 'Tokyo Karaoke Bar',        emoji: '🎤', ffmpeg: 'asetrate=48000*0.95,aresample=48000,equalizer=f=300:width_type=o:width=2:g=3' },
+  american_vaporwave:   { label: 'American Vaporwave',       emoji: '🌊', ffmpeg: 'asetrate=48000*0.82,aresample=48000,atempo=0.90' },
+
+  // Group 2 — Effects / Bass / Party
+  radio_paris_90s:      { label: 'Radio Paris in 90s',       emoji: '📻', ffmpeg: 'equalizer=f=100:width_type=o:width=2:g=4,equalizer=f=8000:width_type=o:width=2:g=-3,aecho=0.8:0.9:40:0.3' },
+  blazing_dubai:        { label: 'Blazing into the Dubai Nights', emoji: '🌃', ffmpeg: 'equalizer=f=60:width_type=o:width=2:g=8,equalizer=f=200:width_type=o:width=2:g=4' },
+  '8d_music':           { label: '8D Music Effects',         emoji: '🎧', ffmpeg: 'apulsator=hz=0.125' },
+  pop_music:            { label: 'Pop Music Effects',        emoji: '🎵', ffmpeg: 'equalizer=f=100:width_type=o:width=2:g=2,equalizer=f=3000:width_type=o:width=2:g=3,equalizer=f=10000:width_type=o:width=2:g=2' },
+  soft_music:           { label: 'Soft Music Effects',       emoji: '🌸', ffmpeg: 'equalizer=f=60:width_type=o:width=2:g=-2,equalizer=f=8000:width_type=o:width=2:g=2,atempo=0.97' },
+  tremolo_music:        { label: 'Tremolo Music Effects',    emoji: '〰️', ffmpeg: 'tremolo=f=5:d=0.5' },
+  rock_music:           { label: 'Rock Music Effects',       emoji: '🎸', ffmpeg: 'equalizer=f=60:width_type=o:width=2:g=5,equalizer=f=200:width_type=o:width=2:g=3,equalizer=f=4000:width_type=o:width=2:g=4' },
+  saturday_night:       { label: 'The Saturday Night Party', emoji: '🎉', ffmpeg: 'equalizer=f=80:width_type=o:width=2:g=6,atempo=1.05' },
+  overkilled_bass:      { label: 'The Overkilled Bass',      emoji: '💥', ffmpeg: 'equalizer=f=60:width_type=o:width=2:g=12,equalizer=f=100:width_type=o:width=2:g=8' },
+  sky_high:             { label: 'The Sky High',             emoji: '🚀', ffmpeg: 'asetrate=48000*1.10,aresample=48000,equalizer=f=8000:width_type=o:width=2:g=5' },
+  problem_child:        { label: 'The Problem Child',        emoji: '😈', ffmpeg: 'asetrate=48000*1.15,aresample=48000,equalizer=f=60:width_type=o:width=2:g=6' },
+  deathdealing_deaf:    { label: 'The Deathdealing Deaf',    emoji: '💀', ffmpeg: 'equalizer=f=60:width_type=o:width=2:g=15,equalizer=f=100:width_type=o:width=2:g=10,atempo=1.08' },
+  lurking_shadows:      { label: 'Lurking in the Shadows',   emoji: '👻', ffmpeg: 'aecho=0.8:0.9:500:0.3,equalizer=f=60:width_type=o:width=2:g=4' },
+  satan_billboard:      { label: 'Satan on the Billboard',   emoji: '😱', ffmpeg: 'asetrate=48000*0.75,aresample=48000,equalizer=f=60:width_type=o:width=2:g=10' },
+  zombieland_saga:      { label: 'Zombieland Saga',          emoji: '🧟', ffmpeg: 'asetrate=48000*1.12,aresample=48000,vibrato=f=8:d=0.4,equalizer=f=200:width_type=o:width=2:g=3' },
+};
+
+// Group 1 keys (first 10 filters)
+const FILTER_GROUP_1 = ['default','nightcore_gaming','nightcore_crush','nightcore_big_sister','nightcore_little_sister','daycore_gaming','aliens_mexico','south_jakarta','tokyo_karaoke','american_vaporwave'];
+// Group 2 keys (remaining)
+const FILTER_GROUP_2 = ['radio_paris_90s','blazing_dubai','8d_music','pop_music','soft_music','tremolo_music','rock_music','saturday_night','overkilled_bass','sky_high','problem_child','deathdealing_deaf','lurking_shadows','satan_billboard','zombieland_saga'];
 
 const queues = new Map();
 const audioUrlCache = new Map(); // Cache audio URL để tránh gọi yt-dlp lại
@@ -61,7 +98,7 @@ function createQueue(guildId, voiceChannel, textChannel) {
     connection: null, player,
     songs: [], current: null,
     volume: 1, loop: false, loopQueue: false, idleTimer: null,
-    playerMessage: null,
+    playerMessage: null, filter: 'default',
   };
   queues.set(guildId, queue);
   return queue;
@@ -164,32 +201,54 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function buildPlayerUI(song, paused = false) {
+function buildPlayerUI(song, paused = false, filter = 'default') {
+  const filterInfo = AUDIO_FILTERS[filter] || AUDIO_FILTERS.default;
+
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
-    .setTitle('🎵 Đang phát')
-    .setDescription(`**[${song.title}](${song.url})**`)
-    .addFields({ name: '⏱ Thời lượng', value: `\`${song.duration}\``, inline: true })
-    .setFooter({ text: song.requestedBy ? `Yêu cầu bởi <@${song.requestedBy}>` : 'MiraiBot' });
+    .setAuthor({ name: '🎵 Now Playing' })
+    .setTitle(song.title)
+    .setURL(song.url)
+    .addFields(
+      { name: 'Queue',  value: 'Use </queue:0>',  inline: true },
+      { name: 'Skip',   value: 'Use </skip:0>',   inline: true },
+      { name: 'Skip to', value: 'Use </skipto:0>', inline: true },
+    )
+    .setFooter({ text: `⏱ ${song.duration}${song.requestedBy ? ` • Requested by <@${song.requestedBy}>` : ''}${filter !== 'default' ? ` • Filter: ${filterInfo.label}` : ''}` });
 
-  if (song.thumbnail) embed.setThumbnail(song.thumbnail);
+  if (song.thumbnail) embed.setImage(song.thumbnail.replace('default', 'maxresdefault').replace('hqdefault', 'maxresdefault'));
 
-  const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('music_prev').setEmoji('⏮').setStyle(ButtonStyle.Secondary),
+  // Row 1 — playback controls
+  const row1 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('music_vol_down').setLabel('−').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_stop').setEmoji('🔴').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId('music_pause').setEmoji(paused ? '▶️' : '⏸').setStyle(paused ? ButtonStyle.Success : ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('music_skip').setEmoji('⏭').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('music_stop').setEmoji('⏹').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('music_queue').setEmoji('📋').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_skip').setEmoji('⏩').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('music_vol_up').setLabel('+').setStyle(ButtonStyle.Secondary),
   );
 
-  const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('music_vol_down').setEmoji('🔉').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('music_vol_up').setEmoji('🔊').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('music_loop').setEmoji('🔂').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('music_shuffle').setEmoji('🔀').setStyle(ButtonStyle.Secondary),
-  );
+  // Row 2 — Audio Filters group 1
+  const filterSelect1 = new StringSelectMenuBuilder()
+    .setCustomId('music_filter_1')
+    .setPlaceholder(`🎛 Audio Filters (1) — ${FILTER_GROUP_1.includes(filter) && filter !== 'default' ? filterInfo.label : 'Default'}`)
+    .addOptions(FILTER_GROUP_1.map(key => {
+      const f = AUDIO_FILTERS[key];
+      return { label: f.label, value: key, emoji: f.emoji, default: key === filter };
+    }));
 
-  return { embeds: [embed], components: [row, row2] };
+  // Row 3 — Audio Filters group 2
+  const filterSelect2 = new StringSelectMenuBuilder()
+    .setCustomId('music_filter_2')
+    .setPlaceholder(`🎛 Audio Filters (2) — ${FILTER_GROUP_2.includes(filter) ? filterInfo.label : 'Select...'}`)
+    .addOptions(FILTER_GROUP_2.map(key => {
+      const f = AUDIO_FILTERS[key];
+      return { label: f.label, value: key, emoji: f.emoji, default: key === filter };
+    }));
+
+  const row2 = new ActionRowBuilder().addComponents(filterSelect1);
+  const row3 = new ActionRowBuilder().addComponents(filterSelect2);
+
+  return { embeds: [embed], components: [row1, row2, row3] };
 }
 
 async function getAudioUrl(songUrl) {
@@ -287,12 +346,18 @@ async function playSong(queue, song) {
   try {
     const audioUrl = await getAudioUrl(song.url);
     console.log('Audio URL:', audioUrl?.slice(0, 80));
+
+    // Build ffmpeg args with optional audio filter
+    const filterInfo = AUDIO_FILTERS[queue.filter || 'default'];
+    const filterArgs = filterInfo?.ffmpeg ? ['-af', filterInfo.ffmpeg] : [];
+
     const ffmpeg = spawn(ffmpegPath, [
       '-reconnect', '1',
       '-reconnect_streamed', '1',
       '-reconnect_delay_max', '5',
       '-i', audioUrl,
       '-vn',
+      ...filterArgs,
       '-acodec', 'libopus',
       '-f', 'opus',
       '-ar', '48000',
@@ -320,7 +385,7 @@ async function playSong(queue, song) {
       queue.playerMessage = null;
     }
 
-    queue.playerMessage = await queue.textChannel.send(buildPlayerUI(song));
+    queue.playerMessage = await queue.textChannel.send(buildPlayerUI(song, false, queue.filter || 'default'));
   } catch (err) {
     const { t } = require('./i18n');
     console.error('Play error:', err.message);
@@ -374,4 +439,4 @@ async function connect(queue) {
   });
 }
 
-module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl };
+module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl, AUDIO_FILTERS };

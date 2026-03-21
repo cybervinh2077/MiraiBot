@@ -1,4 +1,4 @@
-const { getQueue, playSong, buildPlayerUI } = require('../utils/musicManager');
+const { getQueue, playSong, buildPlayerUI, AUDIO_FILTERS } = require('../utils/musicManager');
 const { AudioPlayerStatus } = require('@discordjs/voice');
 
 module.exports = {
@@ -20,12 +20,28 @@ module.exports = {
     }
 
     // Music buttons
-    if (!interaction.isButton()) return;
+    if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
     const { customId, guild, member } = interaction;
     if (!customId.startsWith('music_')) return;
 
     const queue = getQueue(guild.id);
     if (!queue) return interaction.reply({ content: '❌ Không có nhạc đang phát.', ephemeral: true });
+
+    // ── Audio Filter select menus ────────────────────────────────────────────
+    if (customId === 'music_filter_1' || customId === 'music_filter_2') {
+      await interaction.deferUpdate();
+      const selectedFilter = interaction.values[0];
+      if (!AUDIO_FILTERS[selectedFilter]) return;
+
+      queue.filter = selectedFilter;
+
+      // Restart current song with new filter
+      if (queue.current) {
+        queue.player.stop();
+        queue.songs.unshift(queue.current);
+      }
+      return;
+    }
 
     await interaction.deferUpdate();
 
@@ -34,7 +50,7 @@ module.exports = {
         const isPaused = queue.player.state.status === AudioPlayerStatus.Paused;
         isPaused ? queue.player.unpause() : queue.player.pause();
         if (queue.playerMessage) {
-          await queue.playerMessage.edit(buildPlayerUI(queue.current, !isPaused)).catch(() => {});
+          await queue.playerMessage.edit(buildPlayerUI(queue.current, !isPaused, queue.filter || 'default')).catch(() => {});
         }
         break;
       }
