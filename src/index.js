@@ -70,3 +70,7 @@ deployCommands().then(() => client.login(process.env.TOKEN));
 const telegramBot = require('./utils/telegramBot');
 telegramBot.start();
 client.once('ready', () => telegramBot.setDiscordClient(client));
+
+// Pokédex auto-refresh (weekly, only fetches new entries)
+const { startScheduler } = require('./pokemon/pokedexRefresher');
+startScheduler();

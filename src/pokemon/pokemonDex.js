@@ -18,6 +18,13 @@ function getDex() {
   return _dex;
 }
 
+/** Force reload the in-memory cache (called by pokedexRefresher after update) */
+function reloadCache() {
+  _dex = null;
+  getDex(); // re-populate immediately
+  console.log(`[PokeDex] Cache reloaded — ${_dex.length} Pokémon loaded.`);
+}
+
 function getRandomPokemon() {
   const dex = getDex();
   return dex[Math.floor(Math.random() * dex.length)];
@@ -51,4 +58,4 @@ function getSpriteUrl(dexId) {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${dexId}.png`;
 }
 
-module.exports = { getRandomPokemon, getPokemonByDexId, getPokemonByName, getEvolutionTargets, getSpriteUrl };
+module.exports = { getRandomPokemon, getPokemonByDexId, getPokemonByName, getEvolutionTargets, getSpriteUrl, reloadCache };
