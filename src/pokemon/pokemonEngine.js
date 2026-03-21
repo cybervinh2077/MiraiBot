@@ -16,6 +16,30 @@ const SHINY_RATE   = 1 / 4096;
 const SPAWN_EXPIRE = 2 * 60 * 1000; // 2 min
 const DAILY_REWARD = 500;
 
+// ─── Shop catalogue ───────────────────────────────────────────────────────────
+const SHOP_ITEMS = {
+  pokeball:    { price: 100,  label: 'Pokéball',        desc: '+5% catch rate' },
+  greatball:   { price: 250,  label: 'Greatball',       desc: '+10% catch rate' },
+  ultraball:   { price: 500,  label: 'Ultraball',       desc: '+20% catch rate (great for shiny!)' },
+  exp_candy_s: { price: 400,  label: 'Exp Candy S',     desc: '+100 XP to one Pokémon' },
+  exp_candy_m: { price: 900,  label: 'Exp Candy M',     desc: '+300 XP to one Pokémon' },
+  rename_tag:  { price: 200,  label: 'Rename Tag',      desc: 'Give a Pokémon a nickname' },
+  box_upgrade: { price: 1000, label: 'Box Upgrade',     desc: '+50 max box slots' },
+  evo_charm:   { price: 1500, label: 'Evolution Charm', desc: 'Reduces XP needed to evolve by 20% (permanent)' },
+};
+
+// ─── Inventory helpers ────────────────────────────────────────────────────────
+function addItem(profile, itemKey, amount = 1) {
+  if (!profile.inventory) profile.inventory = {};
+  profile.inventory[itemKey] = (profile.inventory[itemKey] || 0) + amount;
+}
+
+function removeItem(profile, itemKey, amount = 1) {
+  if (!profile.inventory || (profile.inventory[itemKey] || 0) < amount) return false;
+  profile.inventory[itemKey] -= amount;
+  return true;
+}
+
 // ─── Spawn counter per channel (in-memory) ────────────────────────────────────
 const msgCounters = new Map(); // channelId → count
 
@@ -70,15 +94,16 @@ async function onMessageForSpawn(message) {
 }
 
 // ─── XP / Level ───────────────────────────────────────────────────────────────
-function getRequiredXpForLevel(level) {
-  return 10 * level * level;
+function getRequiredXpForLevel(level, evoCharm = false) {
+  const base = 10 * level * level;
+  return evoCharm ? Math.floor(base * 0.8) : base;
 }
 
 function addXpToPokemon(pokemonInstance, xpGain) {
   pokemonInstance.xp += xpGain;
   let leveled = false;
-  while (pokemonInstance.xp >= getRequiredXpForLevel(pokemonInstance.level)) {
-    pokemonInstance.xp -= getRequiredXpForLevel(pokemonInstance.level);
+  while (pokemonInstance.xp >= getRequiredXpForLevel(pokemonInstance.level, pokemonInstance.evoCharm)) {
+    pokemonInstance.xp -= getRequiredXpForLevel(pokemonInstance.level, pokemonInstance.evoCharm);
     pokemonInstance.level++;
     leveled = true;
   }
@@ -91,6 +116,7 @@ async function catchPokemon(interaction) {
   const guildId   = interaction.guild.id;
   const userId    = interaction.user.id;
   const nameInput = interaction.options.getString('name');
+  const ballInput = interaction.options.getString('ball') || null;
 
   const spawn = getSpawn(channelId);
   if (!spawn) return interaction.reply({ content: '🌿 No wild Pokémon in this channel right now.', ephemeral: true });
@@ -107,6 +133,35 @@ async function catchPokemon(interaction) {
     return interaction.reply({ content: `❌ Wrong name! Try again.`, ephemeral: true });
   }
 
+  const { profile, data } = getUserProfile(guildId, userId);
+
+  // Box size check
+  if (profile.pokemons.length >= (profile.maxBoxSize || 100)) {
+    return interaction.reply({ content: `📦 Your box is full! (${profile.maxBoxSize} slots). Buy a Box Upgrade with \`/poke buy box_upgrade\`.`, ephemeral: true });
+  }
+
+  // Ball logic
+  const BALL_BONUS = { pokeball: 0.05, greatball: 0.10, ultraball: 0.20 };
+  const BASE_CATCH_RATE = 0.50;
+  let catchRate = BASE_CATCH_RATE;
+  let ballUsed = null;
+
+  if (ballInput) {
+    if (!BALL_BONUS[ballInput]) return interaction.reply({ content: '❌ Invalid ball type.', ephemeral: true });
+    if (!removeItem(profile, ballInput, 1)) {
+      return interaction.reply({ content: `❌ You don't have any **${SHOP_ITEMS[ballInput].label}**!`, ephemeral: true });
+    }
+    catchRate += BALL_BONUS[ballInput];
+    ballUsed = ballInput;
+  }
+
+  if (Math.random() > catchRate) {
+    data.users[guildId][userId] = profile;
+    saveData(data);
+    const ballMsg = ballUsed ? ` (${SHOP_ITEMS[ballUsed].label} used)` : '';
+    return interaction.reply({ content: `💨 The Pokémon broke free!${ballMsg}`, ephemeral: true });
+  }
+
   const shiny = Math.random() < SHINY_RATE;
   const instance = {
     uid:       randomUUID().slice(0, 8),
@@ -115,22 +170,23 @@ async function catchPokemon(interaction) {
     level:     Math.floor(Math.random() * 5) + 1,
     xp:        0,
     shiny,
+    evoCharm:  false,
     createdAt: Date.now(),
   };
 
-  const { profile, data } = getUserProfile(guildId, userId);
   profile.pokemons.push(instance);
   profile.stats.caught++;
   if (shiny) profile.stats.shinyCaught++;
   profile.credits += 50;
-  data.users[guildId][userId] = profile;
   clearSpawn(channelId);
+  data.users[guildId][userId] = profile;
   saveData(data);
 
   const shinyTag = shiny ? ' ✨ **SHINY!**' : '';
+  const ballTag  = ballUsed ? ` • Used: ${SHOP_ITEMS[ballUsed].label}` : '';
   const embed = new EmbedBuilder()
     .setTitle(`🎉 You caught a Pokémon!${shinyTag}`)
-    .setDescription(`${interaction.user} caught **${species.name}**!\nLevel: **${instance.level}** | UID: \`${instance.uid}\`\n+50 credits`)
+    .setDescription(`${interaction.user} caught **${species.name}**!\nLevel: **${instance.level}** | UID: \`${instance.uid}\`\n+50 credits${ballTag}`)
     .setColor(shiny ? 0xffd700 : POKE_COLOR)
     .setImage(getSpriteUrl(species.dexId))
     .setFooter({ text: `Types: ${species.types.join(' / ')}` });
@@ -212,10 +268,10 @@ async function duelPokemon(interaction) {
 
   if (p1Wins) {
     addXpToPokemon(inst1, winXp);  p1.stats.duelsWon++;  p1.credits += 100;
-    addXpToPokemon(inst2, loseXp); p2.stats.duelsLost++; p2.credits += 20;
+    addXpToPokemon(inst2, loseXp); p2.stats.duelsLost++; p2.credits += 30;
   } else {
     addXpToPokemon(inst2, winXp);  p2.stats.duelsWon++;  p2.credits += 100;
-    addXpToPokemon(inst1, loseXp); p1.stats.duelsLost++; p1.credits += 20;
+    addXpToPokemon(inst1, loseXp); p1.stats.duelsLost++; p1.credits += 30;
   }
 
   data.users[guildId][userId]       = p1;
@@ -523,12 +579,158 @@ async function pokeDaily(interaction) {
 
 async function pokeBalance(interaction) {
   const { profile } = getUserProfile(interaction.guild.id, interaction.user.id);
+  const inv = profile.inventory || {};
+  const invLines = [
+    inv.pokeball    ? `Pokéball x${inv.pokeball}`       : null,
+    inv.greatball   ? `Greatball x${inv.greatball}`     : null,
+    inv.ultraball   ? `Ultraball x${inv.ultraball}`     : null,
+    inv.exp_candy_s ? `Exp Candy S x${inv.exp_candy_s}` : null,
+    inv.exp_candy_m ? `Exp Candy M x${inv.exp_candy_m}` : null,
+    inv.rename_tag  ? `Rename Tag x${inv.rename_tag}`   : null,
+    inv.box_upgrade ? `Box Upgrade x${inv.box_upgrade}` : null,
+    inv.evo_charm   ? `Evo Charm x${inv.evo_charm}`     : null,
+  ].filter(Boolean);
+
+  const embed = new EmbedBuilder()
+    .setTitle('💰 Balance')
+    .setColor(0xffd700)
+    .addFields(
+      { name: '💳 Credits', value: `**${profile.credits}**`, inline: true },
+      { name: '📦 Box', value: `${profile.pokemons.length} / ${profile.maxBoxSize || 100}`, inline: true },
+    );
+
+  if (invLines.length) embed.addFields({ name: '🎒 Items', value: invLines.join(' • '), inline: false });
+
+  await interaction.reply({ embeds: [embed] });
+}
+
+// ─── Shop ─────────────────────────────────────────────────────────────────────
+async function pokeShop(interaction) {
+  const lines = Object.entries(SHOP_ITEMS).map(([key, item]) =>
+    `\`${key}\` — **${item.label}** — ${item.price} credits\n↳ ${item.desc}`
+  );
+  const embed = new EmbedBuilder()
+    .setTitle('🏪 Pokémon Shop')
+    .setDescription(lines.join('\n\n'))
+    .setColor(POKE_COLOR)
+    .setFooter({ text: 'Use /poke buy <item> [amount] to purchase' });
+  await interaction.reply({ embeds: [embed] });
+}
+
+// ─── Buy ──────────────────────────────────────────────────────────────────────
+async function pokeBuy(interaction) {
+  const guildId = interaction.guild.id;
+  const userId  = interaction.user.id;
+  const itemKey = interaction.options.getString('item');
+  const amount  = Math.max(1, interaction.options.getInteger('amount') || 1);
+
+  const shopItem = SHOP_ITEMS[itemKey];
+  if (!shopItem) return interaction.reply({ content: '❌ Unknown item. Use `/poke shop` to see available items.', ephemeral: true });
+
+  const { profile, data } = getUserProfile(guildId, userId);
+  const totalCost = shopItem.price * amount;
+
+  if (profile.credits < totalCost) {
+    return interaction.reply({
+      content: `❌ Not enough credits! Need **${totalCost}** but you have **${profile.credits}**.`,
+      ephemeral: true,
+    });
+  }
+
+  profile.credits -= totalCost;
+
+  // box_upgrade is applied immediately, not stored in inventory
+  if (itemKey === 'box_upgrade') {
+    profile.maxBoxSize = (profile.maxBoxSize || 100) + 50 * amount;
+    data.users[guildId][userId] = profile;
+    saveData(data);
+    return interaction.reply({
+      embeds: [new EmbedBuilder()
+        .setTitle('📦 Box Upgraded!')
+        .setDescription(`Spent **${totalCost} credits**.\nYour box now holds **${profile.maxBoxSize}** Pokémon!`)
+        .setColor(POKE_COLOR)],
+    });
+  }
+
+  addItem(profile, itemKey, amount);
+  data.users[guildId][userId] = profile;
+  saveData(data);
+
   await interaction.reply({
     embeds: [new EmbedBuilder()
-      .setTitle('💰 Balance')
-      .setDescription(`${interaction.user} has **${profile.credits} credits**.`)
-      .setColor(0xffd700)],
+      .setTitle('✅ Purchase Successful!')
+      .setDescription(`Bought **${shopItem.label} x${amount}** for **${totalCost} credits**.\nRemaining: **${profile.credits} credits**`)
+      .setColor(0x00c851)],
   });
+}
+
+// ─── Item Use ─────────────────────────────────────────────────────────────────
+async function pokeItemUse(interaction) {
+  const guildId  = interaction.guild.id;
+  const userId   = interaction.user.id;
+  const itemType = interaction.options.getString('itemtype');
+  const pokeUid  = interaction.options.getString('pokemonuid');
+  const newName  = interaction.options.getString('newname') || null;
+
+  const { profile, data } = getUserProfile(guildId, userId);
+  const idx = profile.pokemons.findIndex(p => p.uid === pokeUid);
+  if (idx === -1) return interaction.reply({ content: '❌ Pokémon not found.', ephemeral: true });
+
+  const instance = profile.pokemons[idx];
+  const sp = getPokemonByDexId(instance.dexId);
+
+  if (itemType === 'exp_candy_s' || itemType === 'exp_candy_m') {
+    if (!removeItem(profile, itemType, 1)) {
+      return interaction.reply({ content: `❌ You don't have any **${SHOP_ITEMS[itemType].label}**!`, ephemeral: true });
+    }
+    const xpGain = itemType === 'exp_candy_s' ? 100 : 300;
+    const leveled = addXpToPokemon(instance, xpGain);
+    profile.pokemons[idx] = instance;
+    data.users[guildId][userId] = profile;
+    saveData(data);
+
+    const embed = new EmbedBuilder()
+      .setTitle(`🍬 ${SHOP_ITEMS[itemType].label} Used!`)
+      .setDescription(
+        `**${instance.nickname || sp.name}** received **+${xpGain} XP**!\n` +
+        `Now: Level **${instance.level}** | XP: **${instance.xp}** / **${getRequiredXpForLevel(instance.level, instance.evoCharm)}**` +
+        (leveled ? '\n🎉 **Leveled up!**' : '')
+      )
+      .setColor(POKE_COLOR)
+      .setThumbnail(getSpriteUrl(instance.dexId));
+    return interaction.reply({ embeds: [embed] });
+  }
+
+  if (itemType === 'rename_tag') {
+    if (!newName) return interaction.reply({ content: '❌ Provide a new name with the `newname` option.', ephemeral: true });
+    if (!removeItem(profile, 'rename_tag', 1)) {
+      return interaction.reply({ content: `❌ You don't have any **Rename Tag**!`, ephemeral: true });
+    }
+    const oldName = instance.nickname || sp.name;
+    instance.nickname = newName;
+    profile.pokemons[idx] = instance;
+    data.users[guildId][userId] = profile;
+    saveData(data);
+    return interaction.reply({ content: `✅ **${oldName}** has been renamed to **${newName}**!` });
+  }
+
+  if (itemType === 'evo_charm') {
+    if (!removeItem(profile, 'evo_charm', 1)) {
+      return interaction.reply({ content: `❌ You don't have any **Evolution Charm**!`, ephemeral: true });
+    }
+    instance.evoCharm = true;
+    profile.pokemons[idx] = instance;
+    data.users[guildId][userId] = profile;
+    saveData(data);
+    const embed = new EmbedBuilder()
+      .setTitle('✨ Evolution Charm Applied!')
+      .setDescription(`**${instance.nickname || sp.name}** now needs 20% less XP to evolve!`)
+      .setColor(0x7b2fff)
+      .setThumbnail(getSpriteUrl(instance.dexId));
+    return interaction.reply({ embeds: [embed] });
+  }
+
+  return interaction.reply({ content: '❌ Unknown item type. Valid: `exp_candy_s`, `exp_candy_m`, `rename_tag`, `evo_charm`', ephemeral: true });
 }
 
 module.exports = {
@@ -537,4 +739,6 @@ module.exports = {
   tradeStart, tradeAccept, tradeDecline, tradeCancel,
   pokeStart, pokeProfile, pokeList, pokeInfo, pokeDex,
   pokeDaily, pokeBalance,
+  pokeShop, pokeBuy, pokeItemUse,
+  addItem, removeItem,
 };

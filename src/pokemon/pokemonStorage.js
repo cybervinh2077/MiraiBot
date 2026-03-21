@@ -22,6 +22,12 @@ function saveData(data) {
 const DEFAULT_PROFILE = () => ({
   credits: 0,
   pokemons: [],
+  maxBoxSize: 100,
+  inventory: {
+    pokeball: 0, greatball: 0, ultraball: 0,
+    exp_candy_s: 0, exp_candy_m: 0,
+    rename_tag: 0, box_upgrade: 0, evo_charm: 0,
+  },
   stats: { caught: 0, shinyCaught: 0, duelsWon: 0, duelsLost: 0, tradesDone: 0 },
   cooldowns: { daily: 0 },
 });
@@ -30,7 +36,11 @@ function getUserProfile(guildId, userId) {
   const data = loadData();
   if (!data.users[guildId]) data.users[guildId] = {};
   if (!data.users[guildId][userId]) data.users[guildId][userId] = DEFAULT_PROFILE();
-  return { profile: data.users[guildId][userId], data };
+  const profile = data.users[guildId][userId];
+  // migrate old profiles
+  if (!profile.inventory) profile.inventory = DEFAULT_PROFILE().inventory;
+  if (profile.maxBoxSize == null) profile.maxBoxSize = 100;
+  return { profile, data };
 }
 
 function setUserProfile(guildId, userId, profile) {

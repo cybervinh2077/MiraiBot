@@ -11,6 +11,13 @@ module.exports = {
     .addSubcommand(s =>
       s.setName('catch').setDescription('Catch the wild Pokémon in this channel')
         .addStringOption(o => o.setName('name').setDescription('Pokémon name').setRequired(true))
+        .addStringOption(o => o.setName('ball').setDescription('Ball to use (optional)')
+          .setRequired(false)
+          .addChoices(
+            { name: 'Pokéball (+5%)',  value: 'pokeball' },
+            { name: 'Greatball (+10%)', value: 'greatball' },
+            { name: 'Ultraball (+20%)', value: 'ultraball' },
+          ))
     )
     // ── profile ──
     .addSubcommand(s =>
@@ -46,6 +53,40 @@ module.exports = {
     .addSubcommand(s => s.setName('daily').setDescription('Claim your daily credits'))
     // ── balance ──
     .addSubcommand(s => s.setName('balance').setDescription('Check your credit balance'))
+    // ── shop ──
+    .addSubcommand(s => s.setName('shop').setDescription('View the Pokémon item shop'))
+    // ── buy ──
+    .addSubcommand(s =>
+      s.setName('buy').setDescription('Buy an item from the shop')
+        .addStringOption(o => o.setName('item').setDescription('Item key (see /poke shop)').setRequired(true)
+          .addChoices(
+            { name: 'Pokéball (100)',         value: 'pokeball' },
+            { name: 'Greatball (250)',         value: 'greatball' },
+            { name: 'Ultraball (500)',         value: 'ultraball' },
+            { name: 'Exp Candy S (400)',       value: 'exp_candy_s' },
+            { name: 'Exp Candy M (900)',       value: 'exp_candy_m' },
+            { name: 'Rename Tag (200)',        value: 'rename_tag' },
+            { name: 'Box Upgrade (1000)',      value: 'box_upgrade' },
+            { name: 'Evolution Charm (1500)',  value: 'evo_charm' },
+          ))
+        .addIntegerOption(o => o.setName('amount').setDescription('Amount to buy (default 1)').setRequired(false).setMinValue(1))
+    )
+    // ── item group ──
+    .addSubcommandGroup(g =>
+      g.setName('item').setDescription('Use items on your Pokémon')
+        .addSubcommand(s =>
+          s.setName('use').setDescription('Use an item on a Pokémon')
+            .addStringOption(o => o.setName('itemtype').setDescription('Item type').setRequired(true)
+              .addChoices(
+                { name: 'Exp Candy S (+100 XP)',    value: 'exp_candy_s' },
+                { name: 'Exp Candy M (+300 XP)',    value: 'exp_candy_m' },
+                { name: 'Rename Tag (nickname)',     value: 'rename_tag' },
+                { name: 'Evolution Charm (-20% XP)', value: 'evo_charm' },
+              ))
+            .addStringOption(o => o.setName('pokemonuid').setDescription('Pokémon UID').setRequired(true))
+            .addStringOption(o => o.setName('newname').setDescription('New nickname (rename_tag only)').setRequired(false))
+        )
+    )
     // ── trade subcommand group ──
     .addSubcommandGroup(g =>
       g.setName('trade').setDescription('Trade Pokémon with other players')
@@ -82,6 +123,11 @@ module.exports = {
         if (sub === 'cancel')  return await engine.tradeCancel(interaction);
       }
 
+      // ── item group ───────────────────────────────────────────────────────
+      if (group === 'item') {
+        if (sub === 'use') return await engine.pokeItemUse(interaction);
+      }
+
       // ── top-level subcommands ────────────────────────────────────────────
       switch (sub) {
         case 'start':   return await engine.pokeStart(interaction);
@@ -94,6 +140,8 @@ module.exports = {
         case 'duel':    return await engine.duelPokemon(interaction);
         case 'daily':   return await engine.pokeDaily(interaction);
         case 'balance': return await engine.pokeBalance(interaction);
+        case 'shop':    return await engine.pokeShop(interaction);
+        case 'buy':     return await engine.pokeBuy(interaction);
       }
     } catch (err) {
       console.error(`[poke/${group ? group + '.' : ''}${sub}]`, err);
