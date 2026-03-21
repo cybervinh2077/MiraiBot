@@ -1,8 +1,6 @@
 const path = require('path');
 const fs   = require('fs');
 
-// pokedex.json should be placed at src/pokemon/pokedex.json
-// Format: array of { dexId, name, types, baseStats, sprite, evolutions }
 const DEX_PATH = path.join(__dirname, 'pokedex.json');
 
 let _dex = null;
@@ -21,8 +19,21 @@ function getDex() {
 /** Force reload the in-memory cache (called by pokedexRefresher after update) */
 function reloadCache() {
   _dex = null;
-  getDex(); // re-populate immediately
+  getDex();
   console.log(`[PokeDex] Cache reloaded — ${_dex.length} Pokémon loaded.`);
+}
+
+// Watch pokedex.json for external changes (e.g. manual fetch-pokedex.js run)
+// Debounced to avoid double-trigger on some OS
+let _watchDebounce = null;
+if (fs.existsSync(DEX_PATH)) {
+  fs.watch(DEX_PATH, () => {
+    clearTimeout(_watchDebounce);
+    _watchDebounce = setTimeout(() => {
+      console.log('[PokeDex] File changed externally, reloading cache...');
+      reloadCache();
+    }, 500);
+  });
 }
 
 function getRandomPokemon() {
