@@ -2,6 +2,7 @@ const { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, se
 const { handleMusic } = require('../handlers/musicHandler');
 const { t } = require('../utils/i18n');
 const { addXp } = require('../utils/leveling');
+const { onMessageForSpawn } = require('../pokemon/pokemonEngine');
 
 const API_URL = process.env.API_URL;
 const API_KEY = process.env.API_KEY;
@@ -25,6 +26,9 @@ module.exports = {
         msg.channel.send(`🎉 ${msg.author} đã lên **Level ${userData.level}**!`).catch(() => {});
       }
     }).catch(err => console.error('Level system error:', err));
+
+    // ── Pokémon spawn system — fire and forget ──────────────────────────────
+    onMessageForSpawn(msg).catch(err => console.error('Pokemon spawn error:', err));
     // ───────────────────────────────────────────────────────────────────────
 
     const guildId = msg.guild.id;
