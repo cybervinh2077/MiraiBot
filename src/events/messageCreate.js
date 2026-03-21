@@ -1,6 +1,7 @@
 const { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, setPrefix } = require('../utils/guildAuth');
 const { handleMusic } = require('../handlers/musicHandler');
 const { t } = require('../utils/i18n');
+const { addXp } = require('../utils/leveling');
 
 const API_URL = process.env.API_URL;
 const API_KEY = process.env.API_KEY;
@@ -17,6 +18,14 @@ module.exports = {
   async execute(msg) {
     if (msg.author.bot) return;
     if (!msg.guild) return; // Bỏ qua DM
+
+    // ── Level system — runs silently on every message ──────────────────────
+    addXp(msg).then(({ leveledUp, userData }) => {
+      if (leveledUp) {
+        msg.channel.send(`🎉 ${msg.author} đã lên **Level ${userData.level}**!`).catch(() => {});
+      }
+    }).catch(err => console.error('Level system error:', err));
+    // ───────────────────────────────────────────────────────────────────────
 
     const guildId = msg.guild.id;
     const prefix = getPrefix(guildId);
