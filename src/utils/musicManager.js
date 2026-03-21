@@ -57,12 +57,13 @@ const AUDIO_FILTERS = {
   lurking_shadows:      { label: 'Lurking in the Shadows',   emoji: '👻', ffmpeg: 'aecho=0.8:0.9:500:0.3,equalizer=f=60:width_type=o:width=2:g=4' },
   satan_billboard:      { label: 'Satan on the Billboard',   emoji: '😱', ffmpeg: 'asetrate=48000*0.75,aresample=48000,equalizer=f=60:width_type=o:width=2:g=10' },
   zombieland_saga:      { label: 'Zombieland Saga',          emoji: '🧟', ffmpeg: 'asetrate=48000*1.12,aresample=48000,vibrato=f=8:d=0.4,equalizer=f=200:width_type=o:width=2:g=3' },
+  karaoke:              { label: 'Karaoke Mode (vocal remove)', emoji: '🎤', ffmpeg: 'pan=stereo|c0=c0-c1|c1=c1-c0', filterComplex: true },
 };
 
 // Group 1 keys (first 10 filters)
 const FILTER_GROUP_1 = ['default','nightcore_gaming','nightcore_crush','nightcore_big_sister','nightcore_little_sister','daycore_gaming','aliens_mexico','south_jakarta','tokyo_karaoke','american_vaporwave'];
 // Group 2 keys (remaining)
-const FILTER_GROUP_2 = ['radio_paris_90s','blazing_dubai','8d_music','pop_music','soft_music','tremolo_music','rock_music','saturday_night','overkilled_bass','sky_high','problem_child','deathdealing_deaf','lurking_shadows','satan_billboard','zombieland_saga'];
+const FILTER_GROUP_2 = ['radio_paris_90s','blazing_dubai','8d_music','pop_music','soft_music','tremolo_music','rock_music','saturday_night','overkilled_bass','sky_high','problem_child','deathdealing_deaf','lurking_shadows','satan_billboard','zombieland_saga','karaoke'];
 
 const queues = new Map();
 const audioUrlCache = new Map(); // Cache audio URL để tránh gọi yt-dlp lại
@@ -349,7 +350,15 @@ async function playSong(queue, song) {
 
     // Build ffmpeg args with optional audio filter
     const filterInfo = AUDIO_FILTERS[queue.filter || 'default'];
-    const filterArgs = filterInfo?.ffmpeg ? ['-af', filterInfo.ffmpeg] : [];
+    let filterArgs = [];
+    if (filterInfo?.ffmpeg) {
+      if (filterInfo.filterComplex) {
+        // Karaoke / pan filter cần -filter_complex với explicit output mapping
+        filterArgs = ['-filter_complex', `[0:a]${filterInfo.ffmpeg}[aout]`, '-map', '[aout]'];
+      } else {
+        filterArgs = ['-af', filterInfo.ffmpeg];
+      }
+    }
 
     const ffmpeg = spawn(ffmpegPath, [
       '-reconnect', '1',
