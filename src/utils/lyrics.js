@@ -1,6 +1,7 @@
 const GENIUS_TOKEN = process.env.GENIUS_TOKEN;
 
 function parseTitle(title) {
+  // Xử lý các dạng: "Artist - Song", "Song (Official Video)", v.v.
   const parts = title.split(' - ');
   let artist, song;
   if (parts.length >= 2) {
@@ -12,6 +13,39 @@ function parseTitle(title) {
     song = title.replace(/\(.*?\)|\[.*?\]/g, '').trim();
   }
   return { artist, song };
+}
+
+// Normalize string để so sánh: lowercase, bỏ ký tự đặc biệt
+function normalize(str) {
+  return (str || '').toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Tính điểm khớp giữa candidate và query artist/song
+function scoreMatch(candidate, queryArtist, querySong) {
+  const cArtist = normalize(candidate.artistName || '');
+  const cTrack  = normalize(candidate.trackName  || '');
+  const qArtist = normalize(queryArtist);
+  const qSong   = normalize(querySong);
+
+  let score = 0;
+
+  // Song title match (quan trọng nhất)
+  if (cTrack === qSong) score += 100;
+  else if (cTrack.includes(qSong) || qSong.includes(cTrack)) score += 60;
+
+  // Artist match
+  if (qArtist) {
+    if (cArtist === qArtist) score += 80;
+    else if (cArtist.includes(qArtist) || qArtist.includes(cArtist)) score += 40;
+  }
+
+  // Ưu tiên bài có lyrics
+  if (candidate.plainLyrics) score += 10;
+
+  return score;
 }
 
 // Genius search → trả về song id + info
@@ -31,12 +65,9 @@ async function searchGenius(query) {
   }
 }
 
-// Lấy lyrics qua Genius song detail API (có embed lyrics trong một số trường hợp)
-// Fallback: dùng lyrics.ovh vì Genius API không trả lyrics trực tiếp ở free tier
+// lyrics.ovh fallback
 async function lyricsOvh(artist, song) {
   try {
-    const query = artist ? `${artist} ${song}` : song;
-    // Thử với artist + song
     if (artist) {
       const res = await fetch(
         `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(song)}`
@@ -44,7 +75,6 @@ async function lyricsOvh(artist, song) {
       const data = await res.json();
       if (data.lyrics) return data.lyrics;
     }
-    // Thử chỉ với song title
     const res2 = await fetch(
       `https://api.lyrics.ovh/v1/${encodeURIComponent(song)}/${encodeURIComponent(song)}`
     );
@@ -55,7 +85,7 @@ async function lyricsOvh(artist, song) {
   }
 }
 
-// lrclib.net - API miễn phí, không cần key, có lyrics synced
+// lrclib.net — chọn kết quả khớp nhất với artist + song
 async function lrclibSearch(artist, song) {
   try {
     const query = artist ? `${artist} ${song}` : song;
@@ -64,25 +94,37 @@ async function lrclibSearch(artist, song) {
     );
     const data = await res.json();
     if (!data?.length) return null;
-    // Ưu tiên bài có plainLyrics
-    const hit = data.find(d => d.plainLyrics) || data[0];
-    if (!hit?.plainLyrics) return null;
-    return { lyrics: hit.plainLyrics, artist: hit.artistName, song: hit.trackName };
+
+    // Score tất cả kết quả, chọn cái khớp nhất
+    const scored = data
+      .filter(d => d.plainLyrics)
+      .map(d => ({ ...d, _score: scoreMatch(d, artist, song) }))
+      .sort((a, b) => b._score - a._score);
+
+    if (!scored.length) return null;
+
+    const best = scored[0];
+    // Nếu score quá thấp (< 50) thì không tin tưởng kết quả
+    if (best._score < 50) return null;
+
+    return { lyrics: best.plainLyrics, artist: best.artistName, song: best.trackName };
   } catch {
     return null;
   }
 }
 
-async function getLyrics(title) {
+async function getLyrics(title, artistHint = '') {
   const { artist, song } = parseTitle(title);
+  // Nếu có artistHint từ bên ngoài (ví dụ từ YouTube channel name), ưu tiên dùng
+  const effectiveArtist = artist || artistHint;
 
-  // 1. Thử lrclib trước (miễn phí, không cần key, ổn định)
-  const lrcResult = await lrclibSearch(artist, song);
+  // 1. Thử lrclib với artist + song (có scoring)
+  const lrcResult = await lrclibSearch(effectiveArtist, song);
   if (lrcResult) return lrcResult;
 
-  // 2. Thử Genius search + lyrics.ovh với tên chính xác từ Genius
+  // 2. Thử Genius search → lấy tên chính xác → lyrics.ovh
   if (GENIUS_TOKEN) {
-    const query = artist ? `${artist} ${song}` : song;
+    const query = effectiveArtist ? `${effectiveArtist} ${song}` : song;
     const hit = await searchGenius(query);
     if (hit) {
       const ovhLyrics = await lyricsOvh(hit.artist, hit.title);
@@ -91,8 +133,8 @@ async function getLyrics(title) {
   }
 
   // 3. Fallback lyrics.ovh với title gốc
-  const ovhLyrics = await lyricsOvh(artist, song);
-  if (ovhLyrics) return { lyrics: ovhLyrics, artist, song };
+  const ovhLyrics = await lyricsOvh(effectiveArtist, song);
+  if (ovhLyrics) return { lyrics: ovhLyrics, artist: effectiveArtist, song };
 
   return null;
 }
