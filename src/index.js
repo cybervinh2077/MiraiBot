@@ -69,7 +69,13 @@ deployCommands().then(() => client.login(process.env.TOKEN));
 // Khởi động Telegram bot control
 const telegramBot = require('./utils/telegramBot');
 telegramBot.start();
-client.once('ready', () => telegramBot.setDiscordClient(client));
+client.once('ready', () => {
+  telegramBot.setDiscordClient(client);
+
+  // Đồng bộ data lên web (Supabase)
+  const { startWebSync } = require('./utils/webSync');
+  startWebSync(client);
+});
 
 // Pokédex auto-refresh (weekly, only fetches new entries)
 const { startScheduler } = require('./pokemon/pokedexRefresher');
