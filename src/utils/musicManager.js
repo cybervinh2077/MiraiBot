@@ -192,12 +192,38 @@ async function getVideosByIds(videoIds) {
 }
 
 async function getVideoById(videoId) {
+// Full video details for /songinfo
+async function getVideoDetails(videoId) {
   const params = new URLSearchParams({
-    part: 'snippet,contentDetails',
+    part: 'snippet,contentDetails,statistics',
     id: videoId,
     key: YT_API_KEY,
   });
   const res = await fetch(`${YT_VIDEO_URL}?${params}`);
+  const data = await res.json();
+  if (!data.items?.length) return null;
+  const item = data.items[0];
+  const s = item.snippet;
+  const stats = item.statistics || {};
+
+  // Truncate description to 300 chars
+  const desc = (s.description || '').slice(0, 300).trim();
+
+  return {
+    title:        s.title,
+    url:          `https://www.youtube.com/watch?v=${videoId}`,
+    channel:      s.channelTitle,
+    channelUrl:   `https://www.youtube.com/channel/${s.channelId}`,
+    publishedAt:  s.publishedAt,
+    duration:     parseDuration(item.contentDetails.duration),
+    thumbnail:    s.thumbnails?.maxres?.url || s.thumbnails?.high?.url || s.thumbnails?.default?.url,
+    description:  desc || null,
+    viewCount:    stats.viewCount ? parseInt(stats.viewCount).toLocaleString() : null,
+    likeCount:    stats.likeCount ? parseInt(stats.likeCount).toLocaleString() : null,
+    tags:         (s.tags || []).slice(0, 5),
+    categoryId:   item.contentDetails.caption === 'true' ? 'Has captions' : null,
+  };
+}
   const data = await res.json();
   if (data.error) {
     console.error('YouTube API error:', data.error.code, data.error.message);
@@ -508,4 +534,4 @@ async function connect(queue) {
   });
 }
 
-module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, getVideosByIds, getPlaylistItems, extractPlaylistId, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl, AUDIO_FILTERS };
+module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, getVideoDetails, getVideosByIds, getPlaylistItems, extractPlaylistId, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl, AUDIO_FILTERS };
