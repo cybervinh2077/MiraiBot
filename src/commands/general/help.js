@@ -8,7 +8,7 @@ module.exports = {
     .setDescription('Hiện toàn bộ hướng dẫn sử dụng MiraiBot'),
   async execute(interaction) {
     const guildId = interaction.guild.id;
-    const embeds  = buildHelpEmbeds();
+    const embeds  = buildHelpEmbeds(guildId);
 
     try {
       // Discord DM giới hạn 10 embeds/message — chia 2 lần

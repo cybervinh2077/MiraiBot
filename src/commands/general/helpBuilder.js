@@ -1,40 +1,42 @@
 const { EmbedBuilder } = require('discord.js');
+const { t } = require('../../utils/i18n');
 
-// Returns array of embeds — one per section, all sent to DM
-function buildHelpEmbeds() {
+function buildHelpEmbeds(guildId) {
+  const g = guildId;
   const color = 0x5865f2;
 
   const account = new EmbedBuilder()
-    .setTitle('📖 MiraiBot — Hướng dẫn sử dụng')
+    .setTitle(t(g, 'help_title'))
     .setColor(color)
-    .setDescription('Bot đa năng cho server MyMirai. Tất cả lệnh đều dùng slash command `/`.')
+    .setDescription(t(g, 'help_intro'))
     .addFields({
-      name: '🔐 Tài khoản',
+      name: t(g, 'help_section_account'),
       value: [
-        '`/login` — Liên kết tài khoản MyMirai cho server',
-        '`/logout` — Hủy liên kết (chỉ người đã đăng nhập)',
-        '`/info` — Xem thông tin tài khoản đã liên kết',
-        '`/lang <vn|en|jp>` — Đổi ngôn ngữ bot cho server',
+        t(g, 'help_cmd_login_short'),
+        t(g, 'help_cmd_logout_short'),
+        t(g, 'help_cmd_info_short'),
+        t(g, 'help_cmd_lang_short'),
       ].join('\n'),
     });
 
   const music = new EmbedBuilder()
     .setColor(color)
     .addFields({
-      name: '🎵 Nhạc',
+      name: t(g, 'help_section_music'),
       value: [
-        '`/play <tên/url>` — Phát nhạc hoặc thêm vào queue',
-        '`/skip` — Bỏ qua bài hiện tại',
-        '`/stop` — Dừng nhạc và xóa queue',
-        '`/pause` — Tạm dừng',
-        '`/resume` — Tiếp tục phát',
-        '`/queue` — Xem danh sách queue',
-        '`/nowplaying` — Xem bài đang phát',
-        '`/volume <0-200>` — Chỉnh âm lượng',
-        '`/loop` — Bật/tắt loop bài hoặc queue',
-        '`/shuffle` — Shuffle queue',
-        '`/lyrics [tên]` — Lấy lời bài hát đang phát',
-        '`/leave` — Bot rời kênh voice',
+        t(g, 'help_cmd_play_short'),
+        t(g, 'help_cmd_skip_short'),
+        t(g, 'help_cmd_stop_short'),
+        t(g, 'help_cmd_pause_short'),
+        t(g, 'help_cmd_resume_short'),
+        t(g, 'help_cmd_queue_short'),
+        t(g, 'help_cmd_nowplaying_short'),
+        t(g, 'help_cmd_volume_short'),
+        t(g, 'help_cmd_loop_short'),
+        t(g, 'help_cmd_shuffle_short'),
+        t(g, 'help_cmd_lyrics_short'),
+        t(g, 'help_cmd_leave_short'),
+        t(g, 'help_cmd_songinfo_short'),
       ].join('\n'),
     });
 
@@ -42,26 +44,26 @@ function buildHelpEmbeds() {
     .setColor(color)
     .addFields(
       {
-        name: '🎭 Fun',
+        name: t(g, 'help_section_fun'),
         value: [
-          '`/fun hug [@user]` — Ôm ai đó',
-          '`/fun kiss [@user]` — Hôn ai đó',
-          '`/fun cuddle [@user]` — Cuddle với ai đó',
-          '`/fun 8ball <câu hỏi>` — Hỏi Magic 8ball',
-          '`/fun clapify <text>` — Thêm 👏 vào giữa các từ',
-          '`/fun cute-ugly [@user]` — Đánh giá cute hay ugly',
-          '`/fun emojify <text>` — Thay từ bằng emoji',
-          '`/fun rps <rock|paper|scissors> [@user]` — Oẳn tù xì',
-          '`/fun rate dankness|howgay|ppsize|simp|stank|waifu [@user]` — Rate ai đó',
+          t(g, 'help_cmd_fun_hug'),
+          t(g, 'help_cmd_fun_kiss'),
+          t(g, 'help_cmd_fun_cuddle'),
+          t(g, 'help_cmd_fun_8ball'),
+          t(g, 'help_cmd_fun_clapify'),
+          t(g, 'help_cmd_fun_cuteugly'),
+          t(g, 'help_cmd_fun_emojify'),
+          t(g, 'help_cmd_fun_rps'),
+          t(g, 'help_cmd_fun_rate'),
         ].join('\n'),
       },
       {
-        name: '🖼️ Image',
+        name: t(g, 'help_section_image'),
         value: [
-          '`/image irl cat` — Ảnh mèo ngẫu nhiên',
-          '`/image irl dog` — Ảnh chó ngẫu nhiên',
-          '`/image anime <kemonomimi|kitsune|megumin|neko|okami|rem|senko|shiro>` — Ảnh anime',
-          '`/image meme` — Meme ngẫu nhiên từ Reddit',
+          t(g, 'help_cmd_image_cat'),
+          t(g, 'help_cmd_image_dog'),
+          t(g, 'help_cmd_image_anime'),
+          t(g, 'help_cmd_image_meme'),
         ].join('\n'),
       },
     );
@@ -69,28 +71,9 @@ function buildHelpEmbeds() {
   const rp = new EmbedBuilder()
     .setColor(color)
     .addFields({
-      name: '🎮 Roleplay `/rp`',
+      name: t(g, 'help_section_rp'),
       value: [
-        '`/rp baka @user` — Gọi ai đó là baka',
-        '`/rp bite @user` — Cắn ai đó',
-        '`/rp blush [@user]` — Đỏ mặt',
-        '`/rp cry [@user]` — Khóc',
-        '`/rp dance [@user]` — Nhảy',
-        '`/rp handholding @user` — Nắm tay',
-        '`/rp insult @user` — Xúc phạm',
-        '`/rp kill @user` — Giết (roleplay)',
-        '`/rp lewd [@user]` — Lewd',
-        '`/rp lick @user` — Liếm',
-        '`/rp nom @user` — Nom',
-        '`/rp pat @user` — Xoa đầu',
-        '`/rp poke @user` — Chọc',
-        '`/rp pout [@user]` — Phụng phịu',
-        '`/rp punch @user` — Đấm',
-        '`/rp shrug [@user]` — Nhún vai',
-        '`/rp slap @user` — Tát',
-        '`/rp sleepy [@user]` — Buồn ngủ',
-        '`/rp smug [@user]` — Nhìn đắc ý',
-        '`/rp tickle @user` — Cù lét',
+        t(g, 'help_cmd_rp_list'),
       ].join('\n'),
     });
 
@@ -98,28 +81,24 @@ function buildHelpEmbeds() {
     .setColor(color)
     .addFields(
       {
-        name: '🛠️ Utility',
+        name: t(g, 'help_section_utility'),
         value: [
-          '`/utility guild info` — Thông tin server',
-          '`/utility guild icon` — Icon server',
-          '`/utility guild banner` — Banner server',
-          '`/utility guild roles` — Danh sách roles',
-          '`/utility user info [@user]` — Thông tin người dùng',
-          '`/utility user avatar [@user]` — Avatar người dùng',
+          t(g, 'help_cmd_utility_guild'),
+          t(g, 'help_cmd_utility_user'),
         ].join('\n'),
       },
       {
-        name: '📊 Level',
+        name: t(g, 'help_section_level'),
         value: [
-          '`/rank [@user]` — Xem level và XP',
-          '`/leaderboard` — Top 10 thành viên tích cực nhất',
+          t(g, 'help_cmd_rank_short'),
+          t(g, 'help_cmd_leaderboard_short'),
         ].join('\n'),
       },
       {
-        name: '🛠️ Khác',
+        name: t(g, 'help_section_other'),
         value: [
-          '`/ping` — Kiểm tra độ trễ và thông tin hệ thống',
-          '`/help` — Hiện hướng dẫn này',
+          t(g, 'help_cmd_ping_short'),
+          t(g, 'help_cmd_help_short'),
         ].join('\n'),
       },
     );
@@ -128,58 +107,43 @@ function buildHelpEmbeds() {
     .setColor(0xffcb05)
     .addFields(
       {
-        name: '🎮 Pokémon — Bắt đầu',
+        name: t(g, 'help_section_poke_start'),
         value: [
-          '`/poke start` — Bắt đầu hành trình, nhận Pokémon starter',
-          '`/poke catch <tên>` — Bắt Pokémon hoang dã xuất hiện trong kênh',
-          '`/poke profile [@user]` — Xem hồ sơ Pokémon',
-          '`/poke list [trang]` — Xem bộ sưu tập (20 con/trang)',
-          '`/poke info <uid>` — Thông tin chi tiết 1 Pokémon',
-          '`/poke dex <tên|số>` — Tra Pokédex',
+          t(g, 'help_cmd_poke_start'),
+          t(g, 'help_cmd_poke_catch'),
+          t(g, 'help_cmd_poke_profile'),
+          t(g, 'help_cmd_poke_list'),
+          t(g, 'help_cmd_poke_info'),
+          t(g, 'help_cmd_poke_dex'),
         ].join('\n'),
       },
       {
-        name: '🎮 Pokémon — Chiến đấu & Tiến hoá',
+        name: t(g, 'help_section_poke_battle'),
         value: [
-          '`/poke duel @user` — Đấu Pokémon với người khác',
-          '`/poke evolve <uid>` — Tiến hoá Pokémon',
+          t(g, 'help_cmd_poke_duel'),
+          t(g, 'help_cmd_poke_evolve'),
         ].join('\n'),
       },
       {
-        name: '🎮 Pokémon — Trade & Economy',
+        name: t(g, 'help_section_poke_economy'),
         value: [
-          '`/poke trade start @user <uid của bạn> [uid của họ]` — Đề nghị trade',
-          '`/poke trade accept <tradeId>` — Chấp nhận trade',
-          '`/poke trade decline <tradeId>` — Từ chối trade',
-          '`/poke trade cancel <tradeId>` — Hủy trade của mình',
-          '`/poke daily` — Nhận 500 credits mỗi 24h',
-          '`/poke balance` — Xem số credits hiện tại',
+          t(g, 'help_cmd_poke_trade'),
+          t(g, 'help_cmd_poke_daily'),
+          t(g, 'help_cmd_poke_balance'),
+          t(g, 'help_cmd_poke_shop'),
+          t(g, 'help_cmd_poke_buy'),
+          t(g, 'help_cmd_poke_item'),
         ].join('\n'),
       },
     )
-    .setFooter({ text: 'Pokémon xuất hiện ngẫu nhiên sau mỗi 20–40 tin nhắn trong kênh' });
+    .setFooter({ text: t(g, 'help_poke_footer') });
 
   const dnd = new EmbedBuilder()
     .setColor(0x8b0000)
     .addFields({
-      name: '🎲 D&D — Echoes of the Forgotten Broadcast',
+      name: t(g, 'help_section_dnd'),
       value: [
-        '`/start-campaign` — Bắt đầu campaign',
-        '`/assign-char` — Chọn nhân vật',
-        '`/action` — Dùng ability của nhân vật',
-        '`/stat` — Xem stat block nhân vật hoặc NPC',
-        '`/party-status` — Xem trạng thái party',
-        '`/quest-log` — Xem danh sách quest',
-        '`/complete-quest` — Hoàn thành quest và nhận XP',
-        '`/roll-init` — Roll initiative',
-        '`/roll-signal` — Toàn party roll signal',
-        '`/save-state` — Lưu campaign state',
-        '`/load-state` — Load campaign state',
-        '`/channel-surf` — Đổi kit và roll initiative',
-        '`/solo-start` — Bắt đầu solo campaign',
-        '`/solo-next` — Tiến đến lượt tiếp theo',
-        '`/solo-auto` — Toggle auto-combat mode',
-        '`/solo-quest` — Advance đến quest/channel cụ thể',
+        t(g, 'help_cmd_dnd_list'),
       ].join('\n'),
     });
 
