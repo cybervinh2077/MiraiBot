@@ -267,4 +267,8 @@ module.exports = {
   help_cmd_poke_item:      '`/poke item use <type> <uid> [new name]` — Use an item',
   help_poke_footer:        'Pokémon appear randomly every 20–40 messages in a channel',
   help_cmd_dnd_list:       '`/start-campaign` `/assign-char` `/action` `/stat` `/party-status` `/quest-log` `/complete-quest` `/roll-init` `/roll-signal` `/save-state` `/load-state` `/channel-surf` `/solo-start` `/solo-next` `/solo-auto` `/solo-quest`',
+
+  // Auto messages
+  voice_empty_leave: '👋 No one left in the voice channel. Bot has left and cleared the queue.',
+  level_up: '🎉 {user} reached **Level {level}**!',
 };

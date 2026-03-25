@@ -1,5 +1,6 @@
 const { addXp } = require('../utils/leveling');
 const { onMessageForSpawn } = require('../pokemon/pokemonEngine');
+const { t } = require('../utils/i18n');
 
 module.exports = {
   name: 'messageCreate',
@@ -10,7 +11,7 @@ module.exports = {
     // Level system
     addXp(msg).then(({ leveledUp, userData }) => {
       if (leveledUp) {
-        msg.channel.send(`🎉 ${msg.author} đã lên **Level ${userData.level}**!`).catch(() => {});
+        msg.channel.send(t(msg.guild.id, 'level_up', { user: msg.author.toString(), level: userData.level })).catch(() => {});
       }
     }).catch(err => console.error('Level system error:', err));
 

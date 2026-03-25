@@ -267,4 +267,8 @@ module.exports = {
   help_cmd_poke_item:      '`/poke item use <タイプ> <uid> [新しい名前]` — アイテムを使用',
   help_poke_footer:        'ポケモンはチャンネルで20〜40メッセージごとにランダムに出現します',
   help_cmd_dnd_list:       '`/start-campaign` `/assign-char` `/action` `/stat` `/party-status` `/quest-log` `/complete-quest` `/roll-init` `/roll-signal` `/save-state` `/load-state` `/channel-surf` `/solo-start` `/solo-next` `/solo-auto` `/solo-quest`',
+
+  // Auto messages
+  voice_empty_leave: '👋 ボイスチャンネルに誰もいなくなりました。ボットが退出してキューをクリアしました。',
+  level_up: '🎉 {user} が **レベル {level}** になりました！',
 };
