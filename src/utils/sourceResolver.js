@@ -47,7 +47,12 @@ async function getSpotifyToken() {
       },
       body: 'grant_type=client_credentials',
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch {
+      console.error('[Spotify] Token response not JSON:', text.slice(0, 100));
+      return null;
+    }
     if (!data.access_token) {
       console.error('[Spotify] Token fetch failed:', JSON.stringify(data));
       return null;
@@ -77,7 +82,12 @@ async function resolveSpotifyTrack(trackId) {
     const res = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch {
+      console.error('[Spotify] Track response not JSON (quota/rate limit?):', text.slice(0, 150));
+      return null;
+    }
     if (!data.name) {
       console.error('[Spotify] Track fetch failed:', JSON.stringify(data).slice(0, 200));
       return null;
@@ -154,6 +164,48 @@ async function resolveSpotifyAlbum(albumId) {
     url = data.next || null;
   }
   return tracks;
+}
+
+// ─── Fallback: dùng yt-dlp extract Spotify metadata khi API unavailable ──────
+async function resolveSpotifyViaYtDlp(url) {
+  try {
+    let result;
+    try {
+      result = await exec(url, {
+        dumpSingleJson: true,
+        noPlaylist: true,
+        noCheckCertificates: true,
+        noWarnings: true,
+        skipDownload: true,
+        socketTimeout: 15,
+      });
+    } catch (e) { result = e; }
+
+    let info = result;
+    if (result && typeof result === 'object' && 'stdout' in result) {
+      try { info = JSON.parse(result.stdout); } catch { return null; }
+    }
+
+    if (!info?.title) return null;
+
+    const artist = info.artist || info.uploader || '';
+    const song   = info.track  || info.title;
+    return {
+      type: 'single',
+      songs: [{
+        title:       artist ? `${artist} - ${song}` : song,
+        artist,
+        song,
+        thumbnail:   info.thumbnail || null,
+        duration:    info.duration ? formatSeconds(info.duration) : '??:??',
+        sourceUrl:   url,
+        searchQuery: artist ? `${artist} ${song}` : song,
+      }],
+    };
+  } catch (err) {
+    console.error('[Spotify] yt-dlp fallback error:', err.message);
+    return null;
+  }
 }
 
 // ─── Apple Music ──────────────────────────────────────────────────────────────
@@ -273,11 +325,15 @@ async function resolveUrl(url) {
 
     if (info.type === 'track') {
       const track = await resolveSpotifyTrack(info.id);
-      if (!track) return null;
-      return {
-        type: 'single',
-        songs: [{ ...track, searchQuery: `${track.artist} ${track.song}` }],
-      };
+      if (track) {
+        return {
+          type: 'single',
+          songs: [{ ...track, searchQuery: `${track.artist} ${track.song}` }],
+        };
+      }
+      // Fallback: Spotify API unavailable → search YouTube bằng URL trực tiếp qua yt-dlp
+      console.warn('[Spotify] API unavailable, falling back to yt-dlp metadata extraction');
+      return await resolveSpotifyViaYtDlp(url);
     }
 
     if (info.type === 'playlist') {
