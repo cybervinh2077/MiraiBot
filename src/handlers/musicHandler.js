@@ -16,6 +16,7 @@ const { getLyrics } = require('../utils/lyrics');
 const { AudioPlayerStatus } = require('@discordjs/voice');
 const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { t } = require('../utils/i18n');
+const { detectSource, isPlaylistUrl, resolveUrl } = require('../utils/sourceResolver');
 
 function gid(msg) { return msg.guild?.id; }
 
@@ -72,15 +73,22 @@ async function cmdPlay(msg, args, voiceChannel) {
   if (!args.length) return msg.reply(t(g, 'music_no_song'));
 
   const query = args.join(' ');
-  const isUrl = query.includes('youtube.com/watch') || query.includes('youtu.be/') || query.includes('youtube.com/playlist');
+  const isYouTube = query.includes('youtube.com/watch') || query.includes('youtu.be/') || query.includes('youtube.com/playlist');
+  const source = detectSource(query);
 
-  if (isUrl) {
-    // Kiểm tra có phải playlist không
+  // ── Spotify / Apple Music / SoundCloud ──────────────────────────────────
+  if (source && source !== 'youtube') {
+    return playExternalSource(msg, query, source, voiceChannel);
+  }
+
+  // ── YouTube URL ──────────────────────────────────────────────────────────
+  if (isYouTube) {
     const playlistId = extractPlaylistId(query);
     if (playlistId) return playPlaylist(msg, query, playlistId, voiceChannel);
     return playDirect(msg, query, voiceChannel);
   }
 
+  // ── Text search ──────────────────────────────────────────────────────────
   const searching = await msg.reply(t(g, 'music_searching', { query }));
   const startTime = Date.now();
   const results = await searchYoutubeList(query).catch(() => []);
@@ -197,8 +205,88 @@ async function playPlaylist(msg, url, playlistId, voiceChannel) {
   }
 }
 
-async function addToQueue(msg, song, voiceChannel, replyMsg) {
-  const g = gid(msg);
+// Convert resolved song metadata → YouTube song object (search if needed)
+async function resolvedToYTSong(resolved, requestedBy) {
+  // SoundCloud: directUrl → dùng trực tiếp, không cần search YouTube
+  if (resolved.directUrl) {
+    return {
+      title:       resolved.title,
+      url:         resolved.directUrl,
+      duration:    resolved.duration || '??:??',
+      thumbnail:   resolved.thumbnail || null,
+      requestedBy,
+    };
+  }
+  // Spotify / Apple Music: search YouTube bằng "Artist - Song"
+  if (resolved.searchQuery) {
+    const ytSong = await searchYoutube(resolved.searchQuery).catch(() => null);
+    if (ytSong) {
+      // Giữ thumbnail từ Spotify nếu đẹp hơn
+      return {
+        ...ytSong,
+        title:     resolved.title || ytSong.title,
+        thumbnail: resolved.thumbnail || ytSong.thumbnail,
+        requestedBy,
+      };
+    }
+  }
+  return null;
+}
+
+async function playExternalSource(msg, url, source, voiceChannel) {
+  const ICONS = { spotify: '🟢', apple: '🍎', soundcloud: '🟠' };
+  const icon = ICONS[source] || '🎵';
+  const statusMsg = await msg.reply(`${icon} Đang tải từ ${source}...`);
+
+  let resolved;
+  try {
+    resolved = await resolveUrl(url);
+  } catch (err) {
+    console.error(`[${source}] resolve error:`, err.message);
+    return statusMsg.edit(`❌ Không thể tải từ ${source}. Kiểm tra lại link.`);
+  }
+
+  if (!resolved) return statusMsg.edit(`❌ Không nhận ra link ${source} này.`);
+
+  if (resolved.type === 'single') {
+    const song = await resolvedToYTSong(resolved.songs[0], msg.author.id);
+    if (!song) return statusMsg.edit(`❌ Không tìm thấy bài hát trên YouTube.`);
+    await addToQueue(msg, song, voiceChannel, statusMsg);
+    return;
+  }
+
+  // Playlist
+  const songs = resolved.songs;
+  if (!songs.length) return statusMsg.edit(`❌ Playlist trống.`);
+
+  await statusMsg.edit(`${icon} Tìm thấy **${songs.length}** bài từ ${resolved.playlistName || source}. Đang tải...`);
+
+  // Resolve bài đầu tiên ngay
+  const firstSong = await resolvedToYTSong(songs[0], msg.author.id);
+  if (!firstSong) return statusMsg.edit(`❌ Không thể tải bài đầu tiên.`);
+
+  await addToQueue(msg, firstSong, voiceChannel, statusMsg);
+
+  // Resolve các bài còn lại trong background
+  if (songs.length > 1) {
+    setImmediate(async () => {
+      let added = 0;
+      for (let i = 1; i < songs.length; i++) {
+        const queue = getQueue(msg.guild.id);
+        if (!queue) break; // Queue bị xóa
+
+        const song = await resolvedToYTSong(songs[i], msg.author.id).catch(() => null);
+        if (song) { queue.songs.push(song); added++; }
+
+        // Nhỏ delay để không spam YouTube API
+        if (i % 5 === 0) await new Promise(r => setTimeout(r, 500));
+      }
+      msg.channel.send(`${icon} Đã thêm **${added}** bài từ ${resolved.playlistName || source} vào queue.`).catch(() => {});
+    });
+  }
+}
+
+async function addToQueue(msg, song, voiceChannel, replyMsg) {  const g = gid(msg);
   let queue = getQueue(msg.guild.id);
 
   if (!queue) {

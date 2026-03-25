@@ -313,7 +313,7 @@ function buildPlayerUI(song, paused = false, filter = 'default') {
 }
 
 async function getAudioUrl(songUrl) {
-  // Kiểm tra cache trước
+  // Kiểm tra cache trước (chỉ cache YouTube)
   const videoId = extractVideoId(songUrl);
   if (videoId) {
     const cached = getCachedAudioUrl(videoId);
