@@ -192,6 +192,31 @@ async function getVideosByIds(videoIds) {
 }
 
 async function getVideoById(videoId) {
+  const params = new URLSearchParams({
+    part: 'snippet,contentDetails',
+    id: videoId,
+    key: YT_API_KEY,
+  });
+  const res = await fetch(`${YT_VIDEO_URL}?${params}`);
+  const data = await res.json();
+  if (data.error) {
+    console.error('YouTube API error:', data.error.code, data.error.message);
+    return null;
+  }
+  if (!data.items?.length) {
+    console.warn('getVideoById: no items for videoId:', videoId);
+    return null;
+  }
+  const item = data.items[0];
+  return {
+    title: item.snippet.title,
+    url: `https://www.youtube.com/watch?v=${videoId}`,
+    duration: parseDuration(item.contentDetails.duration),
+    thumbnail: item.snippet.thumbnails?.default?.url,
+    requestedBy: null,
+  };
+}
+
 // Full video details for /songinfo
 async function getVideoDetails(videoId) {
   const params = new URLSearchParams({
@@ -222,24 +247,6 @@ async function getVideoDetails(videoId) {
     likeCount:    stats.likeCount ? parseInt(stats.likeCount).toLocaleString() : null,
     tags:         (s.tags || []).slice(0, 5),
     categoryId:   item.contentDetails.caption === 'true' ? 'Has captions' : null,
-  };
-}
-  const data = await res.json();
-  if (data.error) {
-    console.error('YouTube API error:', data.error.code, data.error.message);
-    return null;
-  }
-  if (!data.items?.length) {
-    console.warn('getVideoById: no items for videoId:', videoId);
-    return null;
-  }
-  const item = data.items[0];
-  return {
-    title: item.snippet.title,
-    url: `https://www.youtube.com/watch?v=${videoId}`,
-    duration: parseDuration(item.contentDetails.duration),
-    thumbnail: item.snippet.thumbnails?.default?.url,
-    requestedBy: null,
   };
 }
 
