@@ -33,44 +33,67 @@ async function getSpotifyToken() {
   if (_spotifyToken && Date.now() < _spotifyTokenExpiry) return _spotifyToken;
   const clientId     = process.env.SPOTIFY_CLIENT_ID;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
+  if (!clientId || !clientSecret) {
+    console.warn('[Spotify] SPOTIFY_CLIENT_ID or SPOTIFY_CLIENT_SECRET not set in .env');
+    return null;
+  }
 
-  const res = await fetch('https://accounts.spotify.com/api/token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      Authorization: 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
-    },
-    body: 'grant_type=client_credentials',
-  });
-  const data = await res.json();
-  if (!data.access_token) return null;
-  _spotifyToken = data.access_token;
-  _spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
-  return _spotifyToken;
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
+      },
+      body: 'grant_type=client_credentials',
+    });
+    const data = await res.json();
+    if (!data.access_token) {
+      console.error('[Spotify] Token fetch failed:', JSON.stringify(data));
+      return null;
+    }
+    _spotifyToken = data.access_token;
+    _spotifyTokenExpiry = Date.now() + (data.expires_in - 60) * 1000;
+    return _spotifyToken;
+  } catch (err) {
+    console.error('[Spotify] Token fetch error:', err.message);
+    return null;
+  }
 }
 
 function extractSpotifyId(url) {
-  const match = url.match(/spotify\.com\/(track|playlist|album)\/([a-zA-Z0-9]+)/);
+  // Handle URLs with locale prefix: /intl-xx/track/... or /track/...
+  const match = url.match(/spotify\.com(?:\/[a-z]{2}(?:-[a-zA-Z]+)*)?\/(track|playlist|album)\/([a-zA-Z0-9_-]+)/);
   return match ? { type: match[1], id: match[2] } : null;
 }
 
 async function resolveSpotifyTrack(trackId) {
   const token = await getSpotifyToken();
-  if (!token) return null;
-  const res = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  const data = await res.json();
-  if (!data.name) return null;
-  return {
-    title:     `${data.artists.map(a => a.name).join(', ')} - ${data.name}`,
-    artist:    data.artists[0]?.name || '',
-    song:      data.name,
-    thumbnail: data.album?.images?.[0]?.url || null,
-    duration:  formatMs(data.duration_ms),
-    sourceUrl: data.external_urls?.spotify || null,
-  };
+  if (!token) {
+    console.error('[Spotify] No token available — check SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in .env');
+    return null;
+  }
+  try {
+    const res = await fetch(`https://api.spotify.com/v1/tracks/${trackId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await res.json();
+    if (!data.name) {
+      console.error('[Spotify] Track fetch failed:', JSON.stringify(data).slice(0, 200));
+      return null;
+    }
+    return {
+      title:     `${data.artists.map(a => a.name).join(', ')} - ${data.name}`,
+      artist:    data.artists[0]?.name || '',
+      song:      data.name,
+      thumbnail: data.album?.images?.[0]?.url || null,
+      duration:  formatMs(data.duration_ms),
+      sourceUrl: data.external_urls?.spotify || null,
+    };
+  } catch (err) {
+    console.error('[Spotify] resolveSpotifyTrack error:', err.message);
+    return null;
+  }
 }
 
 async function resolveSpotifyPlaylist(playlistId) {
