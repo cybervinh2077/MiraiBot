@@ -127,4 +127,81 @@ module.exports = {
   help_cmd_ping: '`{p}ping` `/ping` — 遅延とボット情報を確認',
   help_cmd_help: '`{p}help` `/help` — このコマンド一覧を表示',
   help_cmd_dnd: '`/start-campaign` `/assign-char` `/action` `/stat` `/party-status` `/quest-log` `/roll-init` など',
+
+  // Ping
+  ping_title: '🏓 Pong!',
+  ping_api_latency: '📡 APIレイテンシ',
+  ping_websocket: '🔌 WebSocket',
+  ping_uptime: '⏱️ 稼働時間',
+  ping_cpu: '🖥️ CPU',
+  ping_temp: '🌡️ 温度',
+  ping_load: '📊 負荷平均',
+  ping_ram: '💾 RAM',
+  ping_commit: '📦 コミット',
+
+  // General errors
+  error_generic: '❌ エラーが発生しました。後でもう一度お試しください。',
+  error_cooldown: '⏳ あと **{sec}秒** 待ってください！',
+
+  // Info command
+  info_no_login: '⚠️ サーバーがログインしていません。`/login` で連携してください。',
+
+  // Login
+  login_already: '✅ **{user}** が {time} にログイン済みです。',
+  login_no_url: '❌ ログインリンクを生成できませんでした。',
+  login_prompt: '🔗 MyMiraiアカウントを連携するにはリンクにアクセスしてください:\n{url}\n\n⏳ リンクは10分間有効です。',
+  login_done: '✅ ログイン成功！ようこそ **{user}** さん！',
+
+  // Logout
+  logout_only_owner: '❌ **{user}** のみログアウトできます。',
+  logout_done: '👋 ログアウトしました。',
+
+  // Prefix
+  prefix_max_len: '❌ プレフィックスは最大3文字です。',
+  prefix_changed: '✅ プレフィックスを `{prefix}` に変更しました。',
+  prefix_only_owner: '❌ **{user}** のみプレフィックスを変更できます。',
+
+  // Rank / Leaderboard
+  rank_title: '{user} のランク',
+  rank_level: '🏆 レベル',
+  rank_xp: '✨ XP',
+  rank_xp_next: '📈 次のレベルまでのXP',
+  rank_footer: 'レベル {level} に必要なXP: {required}',
+  leaderboard_empty: '📭 このサーバーにはまだレベルデータがありません。',
+  leaderboard_title: '🏆 {guild} — ランキング',
+  leaderboard_footer: 'トップ {count} メンバー',
+
+  // Songinfo
+  songinfo_not_found: '❌ 曲が見つかりませんでした。',
+  songinfo_no_playing: '❌ 再生中の曲がありません。`/songinfo <曲名>` で検索できます。',
+  songinfo_no_id: '❌ 曲の情報を取得できません。',
+  songinfo_api_fail: '❌ YouTube APIから情報を読み込めません。',
+  songinfo_channel: '👤 チャンネル',
+  songinfo_duration: '⏱ 時間',
+  songinfo_published: '📅 公開日',
+  songinfo_views: '👁 再生回数',
+  songinfo_likes: '👍 いいね',
+  songinfo_tags: '🏷 タグ',
+  songinfo_description: '📝 説明',
+
+  // Image
+  image_cat_title: '🐱 ランダム猫',
+  image_dog_title: '🐶 ランダム犬',
+  image_anime_title: '✨ アニメ {name}',
+  image_meme_title: '😂 ランダムミーム',
+  image_error: '❌ エラーが発生しました。後でもう一度お試しください。',
+
+  // RP
+  rp_need_target: '❌ このコマンドにはユーザーをメンションしてください。',
+  rp_error: '❌ エラーが発生しました。後でもう一度お試しください。',
+
+  // Utility
+  utility_no_icon: '❌ このサーバーにはアイコンがありません。',
+  utility_no_banner: '❌ このサーバーにはバナーがありません。',
+  utility_no_roles: 'ロールがありません。',
+  utility_error: '❌ エラーが発生しました。後でもう一度お試しください。',
+  utility_guild_info_footer: 'サーバー情報',
+  utility_user_info_footer: 'ユーザー情報',
+  utility_bot_yes: 'はい',
+  utility_bot_no: 'いいえ',
 };

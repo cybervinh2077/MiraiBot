@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { t } = require('../../utils/i18n');
 
 const IMAGE_COLOR = 0xffc300;
 const COOLDOWN_MS = 5000;
@@ -101,7 +102,7 @@ module.exports = {
     const cd = checkCooldown(interaction.user.id, cdKey);
     if (cd) {
       return interaction.reply({
-        content: `⏳ Bạn dùng lệnh này quá nhanh, thử lại sau **${cd}s**.`,
+        content: t(interaction.guild.id, 'error_cooldown', { sec: cd }),
         ephemeral: true,
       });
     }
@@ -115,9 +116,8 @@ module.exports = {
           const url = await fetchCat();
           return interaction.editReply({
             embeds: [new EmbedBuilder()
-              .setTitle('🐱 Random Cat')
-              .setImage(url)
-              .setColor(IMAGE_COLOR)
+              .setTitle(t(interaction.guild.id, 'image_cat_title'))
+              .setImage(url).setColor(IMAGE_COLOR)
               .setFooter({ text: 'Powered by thecatapi.com' })],
           });
         }
@@ -125,42 +125,37 @@ module.exports = {
           const url = await fetchDog();
           return interaction.editReply({
             embeds: [new EmbedBuilder()
-              .setTitle('🐶 Random Dog')
-              .setImage(url)
-              .setColor(IMAGE_COLOR)
+              .setTitle(t(interaction.guild.id, 'image_dog_title'))
+              .setImage(url).setColor(IMAGE_COLOR)
               .setFooter({ text: 'Powered by dog.ceo' })],
           });
         }
       }
 
-      // ── anime ──────────────────────────────────────────────────────────────
       if (group === 'anime') {
         const endpoint = NEKOS_MAP[sub];
         const url = await fetchNekosBest(endpoint);
-        const title = sub.charAt(0).toUpperCase() + sub.slice(1);
+        const name = sub.charAt(0).toUpperCase() + sub.slice(1);
         return interaction.editReply({
           embeds: [new EmbedBuilder()
-            .setTitle(`✨ Random Anime ${title}`)
-            .setImage(url)
-            .setColor(IMAGE_COLOR)
+            .setTitle(t(interaction.guild.id, 'image_anime_title', { name }))
+            .setImage(url).setColor(IMAGE_COLOR)
             .setFooter({ text: 'Powered by nekos.best' })],
         });
       }
 
-      // ── meme ───────────────────────────────────────────────────────────────
       if (sub === 'meme') {
         const meme = await fetchMeme();
         return interaction.editReply({
           embeds: [new EmbedBuilder()
-            .setTitle(meme.title || '😂 Random Meme')
-            .setImage(meme.url)
-            .setColor(IMAGE_COLOR)
+            .setTitle(meme.title || t(interaction.guild.id, 'image_meme_title'))
+            .setImage(meme.url).setColor(IMAGE_COLOR)
             .setFooter({ text: `r/${meme.subreddit} • Powered by meme-api.com` })],
         });
       }
     } catch (err) {
       console.error(`[image/${cdKey}]`, err);
-      const msg = { content: '❌ Đã xảy ra lỗi, vui lòng thử lại sau.', ephemeral: true };
+      const msg = { content: t(interaction.guild.id, 'image_error'), ephemeral: true };
       if (interaction.replied || interaction.deferred) await interaction.followUp(msg);
       else await interaction.reply(msg);
     }

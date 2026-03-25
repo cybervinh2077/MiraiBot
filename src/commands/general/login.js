@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { isGuildAuthed, setGuildAuth, getGuildAuth } = require('../../utils/guildAuth');
+const { t } = require('../../utils/i18n');
 
 const API_URL = process.env.API_URL;
 const API_KEY = process.env.API_KEY;
@@ -12,7 +13,7 @@ module.exports = {
     const guildId = interaction.guild.id;
     if (isGuildAuthed(guildId)) {
       const session = getGuildAuth(guildId);
-      return interaction.reply({ content: `✅ Server đã đăng nhập bởi **${session.discordUsername}** lúc ${new Date(session.linkedAt).toLocaleString('vi-VN')}.`, ephemeral: true });
+      return interaction.reply({ content: t(guildId, 'login_already', { user: session.discordUsername, time: new Date(session.linkedAt).toLocaleString('vi-VN') }), ephemeral: true });
     }
     await interaction.deferReply({ ephemeral: true });
     try {
@@ -22,8 +23,8 @@ module.exports = {
         body: JSON.stringify({ action: 'generate-login-link', discordUserId: interaction.user.id, discordUsername: interaction.user.username }),
       });
       const data = await res.json();
-      if (!data.loginUrl) return interaction.editReply('❌ Không thể tạo link đăng nhập.');
-      await interaction.editReply(`🔗 Truy cập link để liên kết tài khoản MyMirai:\n${data.loginUrl}\n\n⏳ Link có hiệu lực trong 10 phút.`);
+      if (!data.loginUrl) return interaction.editReply(t(guildId, 'login_no_url'));
+      await interaction.editReply(t(guildId, 'login_prompt', { url: data.loginUrl }));
 
       const interval = setInterval(async () => {
         try {
@@ -35,15 +36,15 @@ module.exports = {
           const result = await check.json();
           if (result.status === 'completed') {
             clearInterval(interval);
-            setGuildAuth(guildId, { discordUserId: interaction.user.id, discordUsername: interaction.user.username, miraiUsername: result.username || 'Không rõ' });
-            await interaction.followUp({ content: `✅ Đăng nhập thành công! Xin chào **${result.username}**!`, ephemeral: true });
+            setGuildAuth(guildId, { discordUserId: interaction.user.id, discordUsername: interaction.user.username, miraiUsername: result.username || '?' });
+            await interaction.followUp({ content: t(guildId, 'login_done', { user: result.username }), ephemeral: true });
           }
         } catch {}
       }, 5000);
       setTimeout(() => clearInterval(interval), 10 * 60 * 1000);
     } catch (err) {
       console.error('Login error:', err);
-      await interaction.editReply('❌ Có lỗi xảy ra. Vui lòng thử lại sau.');
+      await interaction.editReply(t(guildId, 'login_error'));
     }
   },
 };

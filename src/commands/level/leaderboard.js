@@ -1,26 +1,26 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const { loadLevels } = require('../../utils/levelStorage');
+const { t } = require('../../utils/i18n');
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('leaderboard')
-    .setDescription('View the top 10 most active members in this server'),
+    .setDescription('Xem top 10 thành viên tích cực nhất server'),
 
   async execute(interaction) {
     await interaction.deferReply();
-
-    const guildId   = interaction.guild.id;
+    const g = interaction.guild.id;
     const all       = loadLevels();
-    const guildData = all[guildId] || {};
+    const guildData = all[g] || {};
 
     const entries = Object.entries(guildData)
       .sort(([, a], [, b]) => b.xp - a.xp)
       .slice(0, 10);
 
     if (entries.length === 0) {
-      return interaction.editReply({ content: '📭 Chưa có dữ liệu level cho server này.' });
+      return interaction.editReply({ content: t(g, 'leaderboard_empty') });
     }
 
     const lines = await Promise.all(
@@ -36,11 +36,11 @@ module.exports = {
     );
 
     const embed = new EmbedBuilder()
-      .setTitle(`🏆 ${interaction.guild.name} — Leaderboard`)
+      .setTitle(t(g, 'leaderboard_title', { guild: interaction.guild.name }))
       .setDescription(lines.join('\n'))
       .setColor(0xffd700)
       .setThumbnail(interaction.guild.iconURL({ size: 256 }))
-      .setFooter({ text: `Top ${entries.length} members` });
+      .setFooter({ text: t(g, 'leaderboard_footer', { count: entries.length }) });
 
     await interaction.editReply({ embeds: [embed] });
   },

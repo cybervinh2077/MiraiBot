@@ -127,4 +127,81 @@ module.exports = {
   help_cmd_ping: '`{p}ping` `/ping` — Kiểm tra độ trễ và thông tin bot',
   help_cmd_help: '`{p}help` `/help` — Hiện danh sách lệnh này',
   help_cmd_dnd: '`/start-campaign` `/assign-char` `/action` `/stat` `/party-status` `/quest-log` `/roll-init` và nhiều hơn nữa',
+
+  // Ping
+  ping_title: '🏓 Pong!',
+  ping_api_latency: '📡 API Latency',
+  ping_websocket: '🔌 WebSocket',
+  ping_uptime: '⏱️ Uptime',
+  ping_cpu: '🖥️ CPU',
+  ping_temp: '🌡️ Nhiệt độ',
+  ping_load: '📊 Load avg',
+  ping_ram: '💾 RAM',
+  ping_commit: '📦 Commit',
+
+  // General errors
+  error_generic: '❌ Có lỗi xảy ra. Thử lại sau nhé!',
+  error_cooldown: '⏳ Chờ **{sec}s** nữa nhé!',
+
+  // Info command
+  info_no_login: '⚠️ Server chưa đăng nhập. Dùng `/login` để liên kết.',
+
+  // Login
+  login_already: '✅ Server đã đăng nhập bởi **{user}** lúc {time}.',
+  login_no_url: '❌ Không thể tạo link đăng nhập.',
+  login_prompt: '🔗 Truy cập link để liên kết tài khoản MyMirai:\n{url}\n\n⏳ Link có hiệu lực trong 10 phút.',
+  login_done: '✅ Đăng nhập thành công! Xin chào **{user}**!',
+
+  // Logout
+  logout_only_owner: '❌ Chỉ **{user}** mới có thể logout.',
+  logout_done: '👋 Đã logout thành công.',
+
+  // Prefix
+  prefix_max_len: '❌ Prefix tối đa 3 ký tự.',
+  prefix_changed: '✅ Đã đổi prefix thành `{prefix}`.',
+  prefix_only_owner: '❌ Chỉ **{user}** mới có thể đổi prefix.',
+
+  // Rank / Leaderboard
+  rank_title: "Rank của {user}",
+  rank_level: '🏆 Level',
+  rank_xp: '✨ XP',
+  rank_xp_next: '📈 XP để lên level',
+  rank_footer: 'XP cần cho level {level}: {required}',
+  leaderboard_empty: '📭 Chưa có dữ liệu level cho server này.',
+  leaderboard_title: '🏆 {guild} — Bảng xếp hạng',
+  leaderboard_footer: 'Top {count} thành viên',
+
+  // Songinfo
+  songinfo_not_found: '❌ Không tìm thấy bài hát.',
+  songinfo_no_playing: '❌ Không có bài nào đang phát. Dùng `/songinfo <tên>` để tìm kiếm.',
+  songinfo_no_id: '❌ Không thể lấy thông tin bài hát này.',
+  songinfo_api_fail: '❌ Không thể tải thông tin từ YouTube API.',
+  songinfo_channel: '👤 Kênh',
+  songinfo_duration: '⏱ Thời lượng',
+  songinfo_published: '📅 Ngày đăng',
+  songinfo_views: '👁 Lượt xem',
+  songinfo_likes: '👍 Lượt thích',
+  songinfo_tags: '🏷 Tags',
+  songinfo_description: '📝 Mô tả',
+
+  // Image
+  image_cat_title: '🐱 Mèo ngẫu nhiên',
+  image_dog_title: '🐶 Chó ngẫu nhiên',
+  image_anime_title: '✨ Anime {name}',
+  image_meme_title: '😂 Meme ngẫu nhiên',
+  image_error: '❌ Đã xảy ra lỗi, vui lòng thử lại sau.',
+
+  // RP
+  rp_need_target: '❌ Bạn cần mention một người dùng cho lệnh này.',
+  rp_error: '❌ Có lỗi xảy ra, thử lại sau nhé!',
+
+  // Utility
+  utility_no_icon: '❌ Server này không có icon.',
+  utility_no_banner: '❌ Server này không có banner.',
+  utility_no_roles: 'Không có role nào.',
+  utility_error: '❌ Đã xảy ra lỗi khi xử lý lệnh, thử lại sau.',
+  utility_guild_info_footer: 'Thông tin Server',
+  utility_user_info_footer: 'Thông tin Người dùng',
+  utility_bot_yes: 'Có',
+  utility_bot_no: 'Không',
 };

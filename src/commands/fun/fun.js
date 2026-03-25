@@ -4,6 +4,7 @@ const {
   EmbedBuilder,
 } = require('discord.js');
 const { checkCooldown, buildEmbed, buildRateEmbed, runHug, runKiss, runCuddle, fetchGif, FUN_COLOR } = require('./funHelper');
+const { t } = require('../../utils/i18n');
 
 // ─── 8ball responses ─────────────────────────────────────────────────────────
 const EIGHTBALL = [
@@ -106,7 +107,7 @@ module.exports = {
     const cd = checkCooldown(userId, cmdKey);
     if (cd) {
       return interaction.reply({
-        content: `⏳ Bạn dùng lệnh này quá nhanh, thử lại sau **${cd}s**.`,
+        content: t(interaction.guild.id, 'error_cooldown', { sec: cd }),
         ephemeral: true,
       });
     }
@@ -132,7 +133,7 @@ module.exports = {
       }
     } catch (err) {
       console.error(`[fun/${cmdKey}]`, err);
-      const msg = { content: '❌ Có lỗi xảy ra. Thử lại sau nhé!', ephemeral: true };
+      const msg = { content: t(interaction.guild.id, 'error_generic'), ephemeral: true };
       if (interaction.replied || interaction.deferred) await interaction.followUp(msg);
       else await interaction.reply(msg);
     }

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { t } = require('../../utils/i18n');
 
 const RP_COLOR = 0xff66cc;
 const COOLDOWN_MS = 5000;
@@ -125,7 +126,7 @@ module.exports = {
     const cd = checkCooldown(interaction.user.id, sub);
     if (cd) {
       return interaction.reply({
-        content: `⏳ Bạn dùng lệnh này quá nhanh, thử lại sau **${cd}s**.`,
+        content: t(interaction.guild.id, 'error_cooldown', { sec: cd }),
         ephemeral: true,
       });
     }
@@ -141,7 +142,7 @@ module.exports = {
 
       // If command requires target but somehow none provided, bail
       if (!target && withoutTarget === null) {
-        return interaction.editReply({ content: '❌ Bạn cần mention một người dùng cho lệnh này.' });
+        return interaction.editReply({ content: t(interaction.guild.id, 'rp_need_target') });
       }
 
       const text = target
@@ -160,7 +161,7 @@ module.exports = {
       await interaction.editReply({ embeds: [embed] });
     } catch (err) {
       console.error(`[rp/${sub}]`, err);
-      const msg = { content: '❌ Có lỗi xảy ra, thử lại sau nhé!', ephemeral: true };
+      const msg = { content: t(interaction.guild.id, 'rp_error'), ephemeral: true };
       if (interaction.replied || interaction.deferred) await interaction.followUp(msg);
       else await interaction.reply(msg);
     }

@@ -127,4 +127,81 @@ module.exports = {
   help_cmd_ping: '`{p}ping` `/ping` — Check latency and bot info',
   help_cmd_help: '`{p}help` `/help` — Show this command list',
   help_cmd_dnd: '`/start-campaign` `/assign-char` `/action` `/stat` `/party-status` `/quest-log` `/roll-init` and more',
+
+  // Ping
+  ping_title: '🏓 Pong!',
+  ping_api_latency: '📡 API Latency',
+  ping_websocket: '🔌 WebSocket',
+  ping_uptime: '⏱️ Uptime',
+  ping_cpu: '🖥️ CPU',
+  ping_temp: '🌡️ Temp',
+  ping_load: '📊 Load avg',
+  ping_ram: '💾 RAM',
+  ping_commit: '📦 Commit',
+
+  // General errors
+  error_generic: '❌ An error occurred. Please try again.',
+  error_cooldown: '⏳ Wait **{sec}s** before using this again!',
+
+  // Info command
+  info_no_login: '⚠️ Server not logged in. Use `/login` to link.',
+
+  // Login
+  login_already: '✅ Server already logged in by **{user}** at {time}.',
+  login_no_url: '❌ Could not generate login link.',
+  login_prompt: '🔗 Visit the link to link your MyMirai account:\n{url}\n\n⏳ Link expires in 10 minutes.',
+  login_done: '✅ Login successful! Welcome **{user}**!',
+
+  // Logout
+  logout_only_owner: '❌ Only **{user}** can logout.',
+  logout_done: '👋 Logged out successfully.',
+
+  // Prefix
+  prefix_max_len: '❌ Prefix max 3 characters.',
+  prefix_changed: '✅ Prefix changed to `{prefix}`.',
+  prefix_only_owner: '❌ Only **{user}** can change the prefix.',
+
+  // Rank / Leaderboard
+  rank_title: "{user}'s Rank",
+  rank_level: '🏆 Level',
+  rank_xp: '✨ XP',
+  rank_xp_next: '📈 XP to next level',
+  rank_footer: 'XP needed for level {level}: {required}',
+  leaderboard_empty: '📭 No level data for this server yet.',
+  leaderboard_title: '🏆 {guild} — Leaderboard',
+  leaderboard_footer: 'Top {count} members',
+
+  // Songinfo
+  songinfo_not_found: '❌ Song not found.',
+  songinfo_no_playing: '❌ Nothing is playing. Use `/songinfo <name>` to search.',
+  songinfo_no_id: '❌ Cannot get song info.',
+  songinfo_api_fail: '❌ Cannot load info from YouTube API.',
+  songinfo_channel: '👤 Channel',
+  songinfo_duration: '⏱ Duration',
+  songinfo_published: '📅 Published',
+  songinfo_views: '👁 Views',
+  songinfo_likes: '👍 Likes',
+  songinfo_tags: '🏷 Tags',
+  songinfo_description: '📝 Description',
+
+  // Image
+  image_cat_title: '🐱 Random Cat',
+  image_dog_title: '🐶 Random Dog',
+  image_anime_title: '✨ Random Anime {name}',
+  image_meme_title: '😂 Random Meme',
+  image_error: '❌ An error occurred, please try again.',
+
+  // RP
+  rp_need_target: '❌ You need to mention a user for this command.',
+  rp_error: '❌ An error occurred, please try again.',
+
+  // Utility
+  utility_no_icon: '❌ This server has no icon.',
+  utility_no_banner: '❌ This server has no banner.',
+  utility_no_roles: 'No roles.',
+  utility_error: '❌ An error occurred, please try again.',
+  utility_guild_info_footer: 'Guild Info',
+  utility_user_info_footer: 'User Info',
+  utility_bot_yes: 'Yes',
+  utility_bot_no: 'No',
 };

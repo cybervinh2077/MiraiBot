@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { t } = require('../../utils/i18n');
 
 const UTILITY_COLOR = 0x5865f2;
 const COOLDOWN_MS = 5000;
@@ -47,7 +48,7 @@ module.exports = {
     const cd = checkCooldown(interaction.user.id, cdKey);
     if (cd) {
       return interaction.reply({
-        content: `⏳ Bạn dùng lệnh này quá nhanh, thử lại sau **${cd}s**.`,
+        content: t(interaction.guild.id, 'error_cooldown', { sec: cd }),
         ephemeral: true,
       });
     }
@@ -65,7 +66,7 @@ module.exports = {
       }
     } catch (err) {
       console.error(`[utility/${cdKey}]`, err);
-      const msg = { content: '❌ Đã xảy ra lỗi khi xử lý lệnh utility, thử lại sau.', ephemeral: true };
+      const msg = { content: t(interaction.guild.id, 'utility_error'), ephemeral: true };
       if (interaction.replied || interaction.deferred) await interaction.followUp(msg);
       else await interaction.reply(msg);
     }
@@ -75,121 +76,93 @@ module.exports = {
 // ─── Guild handlers ───────────────────────────────────────────────────────────
 
 async function guildInfo(interaction) {
+  const g = interaction.guild.id;
   const guild = interaction.guild;
-  await guild.fetch(); // ensure owner + full data loaded
-
+  await guild.fetch();
   const owner = await guild.fetchOwner();
   const createdTs = Math.floor(guild.createdTimestamp / 1000);
-
   const textChannels  = guild.channels.cache.filter(c => c.type === 0).size;
   const voiceChannels = guild.channels.cache.filter(c => c.type === 2).size;
 
   const embed = new EmbedBuilder()
-    .setTitle(guild.name)
-    .setColor(UTILITY_COLOR)
+    .setTitle(guild.name).setColor(UTILITY_COLOR)
     .setThumbnail(guild.iconURL({ size: 1024 }))
     .addFields(
-      { name: '🆔 ID',           value: guild.id,                                    inline: true },
-      { name: '👑 Owner',        value: `${owner.user.tag}\n\`${owner.id}\``,         inline: true },
-      { name: '👥 Members',      value: `${guild.memberCount}`,                       inline: true },
-      { name: '💬 Text channels', value: `${textChannels}`,                           inline: true },
-      { name: '🔊 Voice channels', value: `${voiceChannels}`,                         inline: true },
-      { name: '🎭 Roles',        value: `${guild.roles.cache.size}`,                  inline: true },
-      { name: '🚀 Boost level',  value: `Level ${guild.premiumTier} (${guild.premiumSubscriptionCount} boosts)`, inline: true },
-      { name: '🌐 Locale',       value: guild.preferredLocale,                        inline: true },
-      { name: '📅 Created',      value: `<t:${createdTs}:D> (<t:${createdTs}:R>)`,   inline: false },
+      { name: '🆔 ID',             value: guild.id,                                    inline: true },
+      { name: '👑 Owner',          value: `${owner.user.tag}\n\`${owner.id}\``,         inline: true },
+      { name: '👥 Members',        value: `${guild.memberCount}`,                       inline: true },
+      { name: '💬 Text channels',  value: `${textChannels}`,                            inline: true },
+      { name: '🔊 Voice channels', value: `${voiceChannels}`,                           inline: true },
+      { name: '🎭 Roles',          value: `${guild.roles.cache.size}`,                  inline: true },
+      { name: '🚀 Boost level',    value: `Level ${guild.premiumTier} (${guild.premiumSubscriptionCount} boosts)`, inline: true },
+      { name: '🌐 Locale',         value: guild.preferredLocale,                        inline: true },
+      { name: '📅 Created',        value: `<t:${createdTs}:D> (<t:${createdTs}:R>)`,   inline: false },
     )
-    .setFooter({ text: 'Guild Info' });
+    .setFooter({ text: t(g, 'utility_guild_info_footer') });
 
   await interaction.reply({ embeds: [embed] });
 }
 
 async function guildIcon(interaction) {
+  const g = interaction.guild.id;
   const guild = interaction.guild;
   const iconURL = guild.iconURL({ size: 1024, dynamic: true });
-
-  if (!iconURL) {
-    return interaction.reply({ content: '❌ Server này không có icon.', ephemeral: true });
-  }
-
+  if (!iconURL) return interaction.reply({ content: t(g, 'utility_no_icon'), ephemeral: true });
   const embed = new EmbedBuilder()
-    .setTitle(`${guild.name} — Icon`)
-    .setURL(iconURL)
-    .setImage(iconURL)
-    .setColor(UTILITY_COLOR);
-
+    .setTitle(`${guild.name} — Icon`).setURL(iconURL).setImage(iconURL).setColor(UTILITY_COLOR);
   await interaction.reply({ embeds: [embed] });
 }
 
 async function guildBanner(interaction) {
+  const g = interaction.guild.id;
   const guild = interaction.guild;
   await guild.fetch();
   const bannerURL = guild.bannerURL({ size: 2048 });
-
-  if (!bannerURL) {
-    return interaction.reply({ content: '❌ Server này không có banner.', ephemeral: true });
-  }
-
+  if (!bannerURL) return interaction.reply({ content: t(g, 'utility_no_banner'), ephemeral: true });
   const embed = new EmbedBuilder()
-    .setTitle(`${guild.name} — Banner`)
-    .setURL(bannerURL)
-    .setImage(bannerURL)
-    .setColor(UTILITY_COLOR);
-
+    .setTitle(`${guild.name} — Banner`).setURL(bannerURL).setImage(bannerURL).setColor(UTILITY_COLOR);
   await interaction.reply({ embeds: [embed] });
 }
 
 async function guildRoles(interaction) {
+  const g = interaction.guild.id;
   const guild = interaction.guild;
   const roles = guild.roles.cache
-    .filter(r => r.id !== guild.id)           // exclude @everyone
+    .filter(r => r.id !== guild.id)
     .sort((a, b) => b.position - a.position)
-    .map(r => `<@&${r.id}>`)
-    .join(' ');
-
+    .map(r => `<@&${r.id}>`).join(' ');
   const truncated = roles.length > 4000 ? roles.slice(0, 4000) + '…' : roles;
-
   const embed = new EmbedBuilder()
     .setTitle(`${guild.name} — Roles (${guild.roles.cache.size - 1})`)
-    .setDescription(truncated || 'Không có role nào.')
+    .setDescription(truncated || t(g, 'utility_no_roles'))
     .setColor(UTILITY_COLOR);
-
   await interaction.reply({ embeds: [embed] });
 }
 
-// ─── User handlers ────────────────────────────────────────────────────────────
-
 async function userInfo(interaction) {
+  const g = interaction.guild.id;
   const target = interaction.options.getUser('user') || interaction.user;
   const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-
   const createdTs = Math.floor(target.createdTimestamp / 1000);
   const joinedTs  = member ? Math.floor(member.joinedTimestamp / 1000) : null;
-
   const roles = member
-    ? member.roles.cache
-        .filter(r => r.id !== interaction.guild.id)
-        .sort((a, b) => b.position - a.position)
-        .first(20)
-        .map(r => `<@&${r.id}>`)
-        .join(' ') || 'None'
+    ? member.roles.cache.filter(r => r.id !== interaction.guild.id)
+        .sort((a, b) => b.position - a.position).first(20)
+        .map(r => `<@&${r.id}>`).join(' ') || t(g, 'utility_no_roles')
     : 'N/A';
-
   const color = member?.displayColor || UTILITY_COLOR;
   const avatarURL = target.displayAvatarURL({ size: 1024, dynamic: true });
 
   const embed = new EmbedBuilder()
-    .setTitle(target.tag)
-    .setThumbnail(avatarURL)
-    .setColor(color)
+    .setTitle(target.tag).setThumbnail(avatarURL).setColor(color)
     .addFields(
-      { name: '🆔 ID',         value: target.id,                                      inline: true },
-      { name: '🤖 Bot',        value: target.bot ? 'Yes' : 'No',                      inline: true },
-      { name: '📅 Created',    value: `<t:${createdTs}:D> (<t:${createdTs}:R>)`,      inline: false },
-      ...(joinedTs ? [{ name: '📥 Joined server', value: `<t:${joinedTs}:D> (<t:${joinedTs}:R>)`, inline: false }] : []),
-      { name: `🎭 Roles`,      value: roles,                                           inline: false },
+      { name: '🆔 ID',      value: target.id,                                      inline: true },
+      { name: '🤖 Bot',     value: target.bot ? t(g, 'utility_bot_yes') : t(g, 'utility_bot_no'), inline: true },
+      { name: '📅 Created', value: `<t:${createdTs}:D> (<t:${createdTs}:R>)`,      inline: false },
+      ...(joinedTs ? [{ name: '📥 Joined', value: `<t:${joinedTs}:D> (<t:${joinedTs}:R>)`, inline: false }] : []),
+      { name: '🎭 Roles',   value: roles,                                           inline: false },
     )
-    .setFooter({ text: 'User Info' });
+    .setFooter({ text: t(g, 'utility_user_info_footer') });
 
   await interaction.reply({ embeds: [embed] });
 }
@@ -197,12 +170,7 @@ async function userInfo(interaction) {
 async function userAvatar(interaction) {
   const target = interaction.options.getUser('user') || interaction.user;
   const avatarURL = target.displayAvatarURL({ size: 1024, dynamic: true });
-
   const embed = new EmbedBuilder()
-    .setTitle(`${target.tag} — Avatar`)
-    .setURL(avatarURL)
-    .setImage(avatarURL)
-    .setColor(UTILITY_COLOR);
-
+    .setTitle(`${target.tag} — Avatar`).setURL(avatarURL).setImage(avatarURL).setColor(UTILITY_COLOR);
   await interaction.reply({ embeds: [embed] });
 }
