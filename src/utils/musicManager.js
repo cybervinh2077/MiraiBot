@@ -295,8 +295,19 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+const SOURCE_LABELS = {
+  spotify:    { label: 'Spotify',      emoji: '🟢' },
+  apple:      { label: 'Apple Music',  emoji: '🍎' },
+  soundcloud: { label: 'SoundCloud',   emoji: '🟠' },
+  youtube:    { label: 'YouTube',      emoji: '🔴' },
+};
+
 function buildPlayerUI(song, paused = false, filter = 'default') {
   const filterInfo = AUDIO_FILTERS[filter] || AUDIO_FILTERS.default;
+
+  // Source badge
+  const src = SOURCE_LABELS[song.source] || SOURCE_LABELS.youtube;
+  const sourceBadge = `${src.emoji} ${src.label}`;
 
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
@@ -304,11 +315,18 @@ function buildPlayerUI(song, paused = false, filter = 'default') {
     .setTitle(song.title)
     .setURL(song.url)
     .addFields(
-      { name: 'Queue',  value: 'Use </queue:0>',  inline: true },
-      { name: 'Skip',   value: 'Use </skip:0>',   inline: true },
-      { name: 'Skip to', value: 'Use </skipto:0>', inline: true },
+      { name: 'Queue',   value: 'Use </queue:0>',   inline: true },
+      { name: 'Skip',    value: 'Use </skip:0>',    inline: true },
+      { name: 'Skip to', value: 'Use </skipto:0>',  inline: true },
     )
-    .setFooter({ text: `⏱ ${song.duration}${song.requestedBy ? ` • Requested by <@${song.requestedBy}>` : ''}${filter !== 'default' ? ` • Filter: ${filterInfo.label}` : ''}` });
+    .setFooter({
+      text: [
+        `⏱ ${song.duration}`,
+        song.requestedBy ? `Requested by <@${song.requestedBy}>` : null,
+        sourceBadge,
+        filter !== 'default' ? `Filter: ${filterInfo.label}` : null,
+      ].filter(Boolean).join(' • '),
+    });
 
   if (song.thumbnail) embed.setImage(song.thumbnail.replace('default', 'maxresdefault').replace('hqdefault', 'maxresdefault'));
 

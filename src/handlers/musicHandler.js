@@ -140,6 +140,7 @@ async function cmdPlay(msg, args, voiceChannel) {
       }
     }
     song.requestedBy = msg.author.id;
+    song.source = 'youtube';
     await addToQueue(msg, song, voiceChannel, searching);
   });
 
@@ -154,6 +155,7 @@ async function playDirect(msg, url, voiceChannel) {
   const song = await searchYoutube(url).catch(() => null);
   if (!song) return searching.edit(t(g, 'music_load_fail'));
   song.requestedBy = msg.author.id;
+  song.source = 'youtube';
   await addToQueue(msg, song, voiceChannel, searching);
 }
 
@@ -175,6 +177,7 @@ async function playPlaylist(msg, url, playlistId, voiceChannel) {
   const firstSong = await getVideoById(videoIds[0]).catch(() => null);
   if (!firstSong) return statusMsg.edit('❌ Không thể tải bài đầu tiên trong playlist.');
   firstSong.requestedBy = msg.author.id;
+  firstSong.source = 'youtube';
 
   await statusMsg.edit(`✅ Tìm thấy **${videoIds.length}** bài trong playlist. Đang thêm vào queue...`);
 
@@ -192,6 +195,7 @@ async function playPlaylist(msg, url, playlistId, voiceChannel) {
 
         for (const song of songs) {
           song.requestedBy = msg.author.id;
+          song.source = 'youtube';
           queue.songs.push(song);
         }
 
@@ -206,7 +210,7 @@ async function playPlaylist(msg, url, playlistId, voiceChannel) {
 }
 
 // Convert resolved song metadata → YouTube song object (search if needed)
-async function resolvedToYTSong(resolved, requestedBy) {
+async function resolvedToYTSong(resolved, requestedBy, source = 'youtube') {
   // SoundCloud: directUrl → dùng trực tiếp, không cần search YouTube
   if (resolved.directUrl) {
     return {
@@ -215,18 +219,19 @@ async function resolvedToYTSong(resolved, requestedBy) {
       duration:    resolved.duration || '??:??',
       thumbnail:   resolved.thumbnail || null,
       requestedBy,
+      source:      'soundcloud',
     };
   }
   // Spotify / Apple Music: search YouTube bằng "Artist - Song"
   if (resolved.searchQuery) {
     const ytSong = await searchYoutube(resolved.searchQuery).catch(() => null);
     if (ytSong) {
-      // Giữ thumbnail từ Spotify nếu đẹp hơn
       return {
         ...ytSong,
         title:     resolved.title || ytSong.title,
         thumbnail: resolved.thumbnail || ytSong.thumbnail,
         requestedBy,
+        source,
       };
     }
   }
@@ -249,7 +254,7 @@ async function playExternalSource(msg, url, source, voiceChannel) {
   if (!resolved) return statusMsg.edit(`❌ Không nhận ra link ${source} này.`);
 
   if (resolved.type === 'single') {
-    const song = await resolvedToYTSong(resolved.songs[0], msg.author.id);
+    const song = await resolvedToYTSong(resolved.songs[0], msg.author.id, source);
     if (!song) return statusMsg.edit(`❌ Không tìm thấy bài hát trên YouTube.`);
     await addToQueue(msg, song, voiceChannel, statusMsg);
     return;
@@ -262,7 +267,7 @@ async function playExternalSource(msg, url, source, voiceChannel) {
   await statusMsg.edit(`${icon} Tìm thấy **${songs.length}** bài từ ${resolved.playlistName || source}. Đang tải...`);
 
   // Resolve bài đầu tiên ngay
-  const firstSong = await resolvedToYTSong(songs[0], msg.author.id);
+  const firstSong = await resolvedToYTSong(songs[0], msg.author.id, source);
   if (!firstSong) return statusMsg.edit(`❌ Không thể tải bài đầu tiên.`);
 
   await addToQueue(msg, firstSong, voiceChannel, statusMsg);
@@ -273,12 +278,11 @@ async function playExternalSource(msg, url, source, voiceChannel) {
       let added = 0;
       for (let i = 1; i < songs.length; i++) {
         const queue = getQueue(msg.guild.id);
-        if (!queue) break; // Queue bị xóa
+        if (!queue) break;
 
-        const song = await resolvedToYTSong(songs[i], msg.author.id).catch(() => null);
+        const song = await resolvedToYTSong(songs[i], msg.author.id, source).catch(() => null);
         if (song) { queue.songs.push(song); added++; }
 
-        // Nhỏ delay để không spam YouTube API
         if (i % 5 === 0) await new Promise(r => setTimeout(r, 500));
       }
       msg.channel.send(`${icon} Đã thêm **${added}** bài từ ${resolved.playlistName || source} vào queue.`).catch(() => {});
