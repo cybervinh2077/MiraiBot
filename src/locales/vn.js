@@ -336,4 +336,12 @@ module.exports = {
   poker_hand_FOUR_OF_A_KIND:  'Tứ quý',
   poker_hand_STRAIGHT_FLUSH:  'Thùng phá sảnh',
   poker_hand_ROYAL_FLUSH:     'Thùng hoàng gia',
+
+  // Help — Poker section
+  help_section_poker:      '🃏 Poker — Texas Hold\'em Solo',
+  help_cmd_poker_start:    '`/poker solo start [easy|hard]` — Bắt đầu ván poker 1 vs Bot',
+  help_cmd_poker_stop:     '`/poker solo stop` — Kết thúc session hiện tại',
+  help_cmd_poker_info:     '`/poker solo info` — Xem thông tin session đang chạy',
+  help_cmd_poker_actions:  'Trong ván: nút **Fold / Check / Call / Raise** xuất hiện tự động',
+  help_poker_footer:       'Ảnh lá bài hiển thị trực tiếp • Timeout 60s/lượt • Easy & Hard mode',
 };

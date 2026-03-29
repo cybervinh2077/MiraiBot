@@ -336,4 +336,12 @@ module.exports = {
   poker_hand_FOUR_OF_A_KIND:  'フォーカード',
   poker_hand_STRAIGHT_FLUSH:  'ストレートフラッシュ',
   poker_hand_ROYAL_FLUSH:     'ロイヤルフラッシュ',
+
+  // Help — Poker section
+  help_section_poker:      '🃏 ポーカー — テキサスホールデムソロ',
+  help_cmd_poker_start:    '`/poker solo start [easy|hard]` — ボットとのソロポーカーセッションを開始',
+  help_cmd_poker_stop:     '`/poker solo stop` — 現在のセッションを終了',
+  help_cmd_poker_info:     '`/poker solo info` — 現在のセッション情報を表示',
+  help_cmd_poker_actions:  'ゲーム中: **フォールド / チェック / コール / レイズ** ボタンが自動表示',
+  help_poker_footer:       'カード画像をリアルタイム表示 • 1ターン60秒タイムアウト • イージー＆ハードモード',
 };

@@ -336,4 +336,12 @@ module.exports = {
   poker_hand_FOUR_OF_A_KIND:  'Four of a Kind',
   poker_hand_STRAIGHT_FLUSH:  'Straight Flush',
   poker_hand_ROYAL_FLUSH:     'Royal Flush',
+
+  // Help — Poker section
+  help_section_poker:      '🃏 Poker — Texas Hold\'em Solo',
+  help_cmd_poker_start:    '`/poker solo start [easy|hard]` — Start a solo poker session vs Bot',
+  help_cmd_poker_stop:     '`/poker solo stop` — End your current session',
+  help_cmd_poker_info:     '`/poker solo info` — View current session info',
+  help_cmd_poker_actions:  'In-game: **Fold / Check / Call / Raise** buttons appear automatically',
+  help_poker_footer:       'Card images shown live • 60s timeout per turn • Easy & Hard mode',
 };

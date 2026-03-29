@@ -147,7 +147,20 @@ function buildHelpEmbeds(guildId) {
       ].join('\n'),
     });
 
-  return [account, music, fun, rp, utility, pokemon, dnd];
+  const poker = new EmbedBuilder()
+    .setColor(0x1a6b3c)
+    .addFields({
+      name: t(g, 'help_section_poker'),
+      value: [
+        t(g, 'help_cmd_poker_start'),
+        t(g, 'help_cmd_poker_stop'),
+        t(g, 'help_cmd_poker_info'),
+        t(g, 'help_cmd_poker_actions'),
+      ].join('\n'),
+    })
+    .setFooter({ text: t(g, 'help_poker_footer') });
+
+  return [account, music, fun, rp, utility, pokemon, dnd, poker];
 }
 
 module.exports = { buildHelpEmbeds };
