@@ -1,5 +1,8 @@
 const { getQueue, playSong, buildPlayerUI, AUDIO_FILTERS } = require('../utils/musicManager');
 const { AudioPlayerStatus } = require('@discordjs/voice');
+const { t } = require('../utils/i18n');
+const { getSession, setSession } = require('../poker/pokerState');
+const pokerCmd = require('../commands/poker/poker');
 
 module.exports = {
   name: 'interactionCreate',
@@ -22,6 +25,42 @@ module.exports = {
     // Music buttons
     if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
     const { customId, guild, member } = interaction;
+
+    // ── Poker buttons ────────────────────────────────────────────────────────
+    if (customId.startsWith('poker_')) {
+      const g   = guild.id;
+      const uid = interaction.user.id;
+
+      // Only the session owner can act
+      if (!customId.endsWith(`_${uid}`)) {
+        return interaction.reply({ content: t(g, 'poker_not_your_turn'), ephemeral: true });
+      }
+
+      const state = getSession(g, uid);
+      if (!state || state.activePlayer !== 'user') {
+        return interaction.reply({ content: t(g, 'poker_not_your_turn'), ephemeral: true });
+      }
+
+      await interaction.deferUpdate();
+
+      // Disable buttons on the action message
+      if (interaction.message) {
+        await interaction.message.edit({ components: [] }).catch(() => {});
+      }
+
+      const { processAction } = pokerCmd._internal || {};
+      // Route action
+      if (customId.startsWith('poker_fold_'))  await pokerCmd._processAction(interaction.channel, g, uid, state, 'fold', 0);
+      if (customId.startsWith('poker_check_')) await pokerCmd._processAction(interaction.channel, g, uid, state, 'check', 0);
+      if (customId.startsWith('poker_call_'))  await pokerCmd._processAction(interaction.channel, g, uid, state, 'call', 0);
+      if (customId.startsWith('poker_raise_')) {
+        // Raise: fixed amount = 2x big blind for simplicity
+        const raiseAmt = state.bigBlind * 2;
+        await pokerCmd._processAction(interaction.channel, g, uid, state, 'raise', raiseAmt);
+      }
+      return;
+    }
+
     if (!customId.startsWith('music_')) return;
     // music_select_<userId> là search result selector, handled by collector in musicHandler
     if (customId.startsWith('music_select_')) return;
