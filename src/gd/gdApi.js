@@ -1,10 +1,13 @@
 /**
  * gdApi.js
  * Uses GDBrowser API (https://gdbrowser.com/api) — free, no key needed, returns JSON
- * Docs: https://github.com/GDColon/GDBrowser
+ * Daily/Weekly: GDBrowser /api/daily|weekly bị block bởi RobTop
+ * → Fallback dùng Boomlings API trực tiếp với headers GD client
  */
 
 const BASE = 'https://gdbrowser.com/api';
+const BOOMLINGS = 'https://www.boomlings.com/database';
+const SECRET    = 'Wmfd2893gb7';
 const TIMEOUT_MS  = 12_000;
 const MAX_RETRIES = 2;
 
@@ -19,7 +22,7 @@ function checkRateLimit(userId) {
   return true;
 }
 
-// ─── HTTP helper ──────────────────────────────────────────────────────────────
+// ─── GDBrowser GET helper ─────────────────────────────────────────────────────
 async function get(path, retries = 0) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -38,6 +41,35 @@ async function get(path, retries = 0) {
     if (retries < MAX_RETRIES) {
       await new Promise(r => setTimeout(r, 1000 * (retries + 1)));
       return get(path, retries + 1);
+    }
+    throw err;
+  }
+}
+
+// ─── Boomlings POST helper (for daily/weekly) ─────────────────────────────────
+async function postBoomlings(endpoint, params, retries = 0) {
+  const body = new URLSearchParams({ ...params, secret: SECRET });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`${BOOMLINGS}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+      },
+      body: body.toString(),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    const text = await res.text();
+    if (!text || text === '-1' || text.trim() === '') return null;
+    return text;
+  } catch (err) {
+    clearTimeout(timer);
+    if (retries < MAX_RETRIES) {
+      await new Promise(r => setTimeout(r, 1000 * (retries + 1)));
+      return postBoomlings(endpoint, params, retries + 1);
     }
     throw err;
   }
@@ -136,21 +168,36 @@ function mapLevel(d) {
 
 // ─── Daily / Weekly ───────────────────────────────────────────────────────────
 /**
- * GDBrowser: GET /api/daily
+ * Daily: Boomlings getGJDailyLevel.php → lấy ID → GDBrowser /api/level/<id>
  */
 async function getDailyLevel() {
-  const data = await get('/daily');
-  if (!data) return null;
-  return mapLevel(data);
+  // Try GDBrowser first
+  const gdb = await get('/daily');
+  if (gdb) return mapLevel(gdb);
+
+  // Fallback: Boomlings direct
+  const raw = await postBoomlings('getGJDailyLevel.php', { weekly: 0, gameVersion: 21, binaryVersion: 35 });
+  if (!raw) return null;
+  // Response format: "<levelId>|<timeLeft>" or just "<levelId>"
+  const levelId = parseInt(raw.split('|')[0]);
+  if (!levelId || levelId < 0) return null;
+  return getLevelById(levelId);
 }
 
 /**
- * GDBrowser: GET /api/weekly
+ * Weekly: Boomlings getGJDailyLevel.php?weekly=1 → lấy ID → GDBrowser /api/level/<id>
  */
 async function getWeeklyDemon() {
-  const data = await get('/weekly');
-  if (!data) return null;
-  return mapLevel(data);
+  // Try GDBrowser first
+  const gdb = await get('/weekly');
+  if (gdb) return mapLevel(gdb);
+
+  // Fallback: Boomlings direct
+  const raw = await postBoomlings('getGJDailyLevel.php', { weekly: 1, gameVersion: 21, binaryVersion: 35 });
+  if (!raw) return null;
+  const levelId = parseInt(raw.split('|')[0]);
+  if (!levelId || levelId < 0) return null;
+  return getLevelById(levelId);
 }
 
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
