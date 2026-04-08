@@ -6,8 +6,6 @@
  */
 
 const BASE = 'https://gdbrowser.com/api';
-const BOOMLINGS = 'https://www.boomlings.com/database';
-const SECRET    = 'Wmfd2893gb7';
 const TIMEOUT_MS  = 12_000;
 const MAX_RETRIES = 2;
 
@@ -41,35 +39,6 @@ async function get(path, retries = 0) {
     if (retries < MAX_RETRIES) {
       await new Promise(r => setTimeout(r, 1000 * (retries + 1)));
       return get(path, retries + 1);
-    }
-    throw err;
-  }
-}
-
-// ─── Boomlings POST helper (for daily/weekly) ─────────────────────────────────
-async function postBoomlings(endpoint, params, retries = 0) {
-  const body = new URLSearchParams({ ...params, secret: SECRET });
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-  try {
-    const res = await fetch(`${BOOMLINGS}/${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
-      },
-      body: body.toString(),
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    const text = await res.text();
-    if (!text || text === '-1' || text.trim() === '') return null;
-    return text;
-  } catch (err) {
-    clearTimeout(timer);
-    if (retries < MAX_RETRIES) {
-      await new Promise(r => setTimeout(r, 1000 * (retries + 1)));
-      return postBoomlings(endpoint, params, retries + 1);
     }
     throw err;
   }
@@ -167,37 +136,41 @@ function mapLevel(d) {
 }
 
 // ─── Daily / Weekly ───────────────────────────────────────────────────────────
-/**
- * Daily: Boomlings getGJDailyLevel.php → lấy ID → GDBrowser /api/level/<id>
- */
-async function getDailyLevel() {
-  // Try GDBrowser first
-  const gdb = await get('/daily');
-  if (gdb) return mapLevel(gdb);
+// GDBrowser /api/daily|weekly bị block bởi RobTop
+// Boomlings bị Cloudflare block IP server
+// Giải pháp: scrape trang HTML gdbrowser.com/daily|weekly để lấy level ID
+// rồi fetch data qua /api/level/<id>
 
-  // Fallback: Boomlings direct
-  const raw = await postBoomlings('getGJDailyLevel.php', { weekly: 0, gameVersion: 21, binaryVersion: 35 });
-  if (!raw) return null;
-  // Response format: "<levelId>|<timeLeft>" or just "<levelId>"
-  const levelId = parseInt(raw.split('|')[0]);
-  if (!levelId || levelId < 0) return null;
-  return getLevelById(levelId);
+async function scrapeLevelId(page) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`https://gdbrowser.com/${page}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const html = await res.text();
+    // Title format: "Level Name (levelId)"
+    const match = html.match(/\((\d{6,})\)/);
+    return match ? parseInt(match[1]) : null;
+  } catch (err) {
+    clearTimeout(timer);
+    return null;
+  }
 }
 
-/**
- * Weekly: Boomlings getGJDailyLevel.php?weekly=1 → lấy ID → GDBrowser /api/level/<id>
- */
-async function getWeeklyDemon() {
-  // Try GDBrowser first
-  const gdb = await get('/weekly');
-  if (gdb) return mapLevel(gdb);
+async function getDailyLevel() {
+  const id = await scrapeLevelId('daily');
+  if (!id) return null;
+  return getLevelById(id);
+}
 
-  // Fallback: Boomlings direct
-  const raw = await postBoomlings('getGJDailyLevel.php', { weekly: 1, gameVersion: 21, binaryVersion: 35 });
-  if (!raw) return null;
-  const levelId = parseInt(raw.split('|')[0]);
-  if (!levelId || levelId < 0) return null;
-  return getLevelById(levelId);
+async function getWeeklyDemon() {
+  const id = await scrapeLevelId('weekly');
+  if (!id) return null;
+  return getLevelById(id);
 }
 
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
