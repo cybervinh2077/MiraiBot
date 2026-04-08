@@ -130,18 +130,23 @@ function parseLevelList(raw) {
 }
 
 // ─── Difficulty helpers ───────────────────────────────────────────────────────
-const DIFFICULTY_NAMES = ['NA', 'Easy', 'Normal', 'Hard', 'Harder', 'Insane', 'Demon'];
-const DEMON_NAMES      = { 3: 'Easy Demon', 4: 'Medium Demon', 0: 'Hard Demon', 5: 'Insane Demon', 6: 'Extreme Demon' };
-const LENGTH_NAMES     = ['Tiny', 'Short', 'Medium', 'Long', 'XL'];
+// GDBrowser trả difficulty dạng string ('Easy', 'Hard Demon', v.v.) nên chỉ cần pass-through
+// Nhưng giữ helpers để format đẹp hơn
 
 function getDifficultyName(level) {
+  // GDBrowser đã trả string difficulty
+  if (typeof level.difficulty === 'string' && level.difficulty) {
+    if (level.isDemon && level.demonDifficulty) return level.demonDifficulty;
+    return level.difficulty;
+  }
   if (level.isAuto)  return 'Auto';
-  if (level.isDemon) return DEMON_NAMES[level.demonDifficulty] || 'Hard Demon';
-  return DIFFICULTY_NAMES[level.difficulty] || 'NA';
+  if (level.isDemon) return 'Demon';
+  return 'N/A';
 }
 
-function getLengthName(length) {
-  return LENGTH_NAMES[length] || 'Unknown';
+function getLengthName(level) {
+  // GDBrowser trả string length ('Short', 'Long', v.v.)
+  return typeof level.length === 'string' ? level.length : 'Unknown';
 }
 
 function getModBadgeName(badge) {

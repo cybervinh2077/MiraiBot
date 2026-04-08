@@ -118,16 +118,16 @@ async function cmdProfile(interaction, g, uid) {
     username = linked.gdUsername;
   }
 
-  const players = await api.searchPlayer(username);
-  if (!players.length) return interaction.editReply(t(g, 'gd_error_player_notfound', { username }));
+  // Use direct profile endpoint for accurate data
+  const player = await api.getPlayerProfile(username);
+  if (!player) return interaction.editReply(t(g, 'gd_error_player_notfound', { username }));
 
-  const player = players[0];
   const modBadge = getModBadgeName(player.modBadge);
 
   const embed = new EmbedBuilder()
     .setTitle(t(g, 'gd_profile_title', { username: player.username }))
     .setColor(player.modBadge > 0 ? 0xffd700 : GD_COLOR)
-    .setURL(`https://gdbrowser.com/u/${player.accountId}`)
+    .setURL(`https://gdbrowser.com/u/${encodeURIComponent(player.username)}`)
     .addFields(
       { name: t(g, 'gd_profile_stars'),         value: `⭐ ${player.stars}`,         inline: true },
       { name: t(g, 'gd_profile_demons'),         value: `👿 ${player.demons}`,         inline: true },
@@ -140,7 +140,7 @@ async function cmdProfile(interaction, g, uid) {
   if (player.rank > 0) embed.addFields({ name: t(g, 'gd_profile_rank'), value: `#${player.rank}`, inline: true });
   if (modBadge) embed.addFields({ name: t(g, 'gd_profile_mod'), value: `🛡️ ${t(g, 'gd_mod_' + (player.modBadge === 2 ? 'elder' : 'regular'))}`, inline: true });
 
-  embed.setFooter({ text: t(g, 'gd_profile_footer', { accountId: player.accountId }) });
+  embed.setFooter({ text: t(g, 'gd_profile_footer', { accountId: player.accountId || '?' }) });
 
   await interaction.editReply({ embeds: [embed] });
 }
@@ -237,16 +237,15 @@ async function cmdAccountLink(interaction, g, uid) {
   await interaction.deferReply({ ephemeral: true });
 
   const username = interaction.options.getString('username');
-  const players  = await api.searchPlayer(username);
+  const player   = await api.getPlayerProfile(username);
 
-  if (!players.length) return interaction.editReply(t(g, 'gd_error_player_notfound', { username }));
+  if (!player) return interaction.editReply(t(g, 'gd_error_player_notfound', { username }));
 
-  const player = players[0];
   linkAccount(uid, player.username, player.accountId);
 
   await interaction.editReply(t(g, 'gd_account_link_success', {
     gdUsername: player.username,
-    accountId: player.accountId,
+    accountId: player.accountId || '?',
   }));
 }
 
@@ -280,13 +279,12 @@ async function cmdModlist(interaction, g) {
 async function cmdCheckmod(interaction, g) {
   await interaction.deferReply();
   const username = interaction.options.getString('username');
-  const players  = await api.searchPlayer(username);
+  const player   = await api.getPlayerProfile(username);
 
-  if (!players.length) return interaction.editReply(t(g, 'gd_error_player_notfound', { username }));
+  if (!player) return interaction.editReply(t(g, 'gd_error_player_notfound', { username }));
 
-  const player  = players[0];
-  const badge   = getModBadgeName(player.modBadge);
-  const isMod   = player.modBadge > 0;
+  const badge = getModBadgeName(player.modBadge);
+  const isMod = player.modBadge > 0;
 
   const embed = new EmbedBuilder()
     .setTitle(t(g, 'gd_checkmod_title', { username: player.username }))
@@ -329,7 +327,7 @@ async function cmdNotifyDisable(interaction, g) {
 // ─── Shared embed builder (exported for notifier) ────────────────────────────
 function buildLevelEmbed(g, level) {
   const diff   = getDifficultyName(level);
-  const length = getLengthName(level.length);
+  const length = getLengthName(level);
   const color  = level.isDemon ? DEMON_COLOR : GD_COLOR;
 
   const embed = new EmbedBuilder()
@@ -337,17 +335,18 @@ function buildLevelEmbed(g, level) {
     .setColor(color)
     .setURL(`https://gdbrowser.com/${level.id}`)
     .addFields(
-      { name: t(g, 'gd_level_difficulty'), value: diff,                    inline: true },
-      { name: t(g, 'gd_level_stars'),      value: `⭐ ${level.stars}`,     inline: true },
-      { name: t(g, 'gd_level_length'),     value: length,                  inline: true },
-      { name: t(g, 'gd_level_downloads'),  value: `⬇️ ${level.downloads}`, inline: true },
-      { name: t(g, 'gd_level_likes'),      value: `👍 ${level.likes}`,     inline: true },
+      { name: t(g, 'gd_level_difficulty'), value: diff || 'N/A',              inline: true },
+      { name: t(g, 'gd_level_stars'),      value: `⭐ ${level.stars}`,        inline: true },
+      { name: t(g, 'gd_level_length'),     value: length || 'Unknown',        inline: true },
+      { name: t(g, 'gd_level_downloads'),  value: `⬇️ ${level.downloads}`,    inline: true },
+      { name: t(g, 'gd_level_likes'),      value: `👍 ${level.likes}`,        inline: true },
       { name: t(g, 'gd_level_coins'),      value: `🪙 ${level.coins}${level.verifiedCoins ? ' ✅' : ''}`, inline: true },
     );
 
   if (level.description) embed.setDescription(`*${level.description.slice(0, 200)}*`);
-  if (level.isEpic)      embed.addFields({ name: t(g, 'gd_level_epic'), value: '🌟 Epic', inline: true });
+  if (level.isEpic)      embed.addFields({ name: t(g, 'gd_level_epic'),     value: '🌟 Epic',     inline: true });
   if (level.featuredScore > 0) embed.addFields({ name: t(g, 'gd_level_featured'), value: '✨ Featured', inline: true });
+  if (level.songName)    embed.addFields({ name: '🎵 Song', value: level.songName, inline: true });
 
   embed.setFooter({ text: t(g, 'gd_level_footer', { author: level.author || '?' }) });
   return embed;
