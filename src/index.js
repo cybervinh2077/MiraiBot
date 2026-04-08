@@ -80,3 +80,7 @@ client.once('ready', () => {
 // Pokédex auto-refresh (weekly, only fetches new entries)
 const { startScheduler } = require('./pokemon/pokedexRefresher');
 startScheduler();
+
+// GD Notifier — polls daily/weekly every 10 min
+const { startNotifier } = require('./gd/gdNotifier');
+client.once('ready', () => startNotifier(client));

@@ -160,7 +160,24 @@ function buildHelpEmbeds(guildId) {
     })
     .setFooter({ text: t(g, 'help_poker_footer') });
 
-  return [account, music, fun, rp, utility, pokemon, dnd, poker];
+  const gd = new EmbedBuilder()
+    .setColor(0x7b68ee)
+    .addFields({
+      name: t(g, 'help_section_gd'),
+      value: [
+        t(g, 'help_cmd_gd_profile'),
+        t(g, 'help_cmd_gd_level'),
+        t(g, 'help_cmd_gd_daily'),
+        t(g, 'help_cmd_gd_weekly'),
+        t(g, 'help_cmd_gd_leaderboard'),
+        t(g, 'help_cmd_gd_account'),
+        t(g, 'help_cmd_gd_modlist'),
+        t(g, 'help_cmd_gd_checkmod'),
+        t(g, 'help_cmd_gd_notify'),
+      ].join('\n'),
+    });
+
+  return [account, music, fun, rp, utility, pokemon, dnd, poker, gd];
 }
 
 module.exports = { buildHelpEmbeds };
