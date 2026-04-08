@@ -135,11 +135,11 @@ function mapLevel(d) {
   };
 }
 
-// ─── Daily / Weekly ───────────────────────────────────────────────────────────
-// GDBrowser /api/daily|weekly bị block bởi RobTop
-// Boomlings bị Cloudflare block IP server
-// Giải pháp: scrape trang HTML gdbrowser.com/daily|weekly để lấy level ID
-// rồi fetch data qua /api/level/<id>
+// ─── Daily / Weekly cache ─────────────────────────────────────────────────────
+const dailyCache  = { level: null, expiresAt: 0 };
+const weeklyCache = { level: null, expiresAt: 0 };
+const DAILY_TTL   = 23 * 60 * 60 * 1000;  // 23h
+const WEEKLY_TTL  = 6  * 24 * 60 * 60 * 1000; // 6 days
 
 async function scrapeLevelId(page) {
   const controller = new AbortController();
@@ -152,7 +152,6 @@ async function scrapeLevelId(page) {
     clearTimeout(timer);
     if (!res.ok) return null;
     const html = await res.text();
-    // Title format: "Level Name (levelId)"
     const match = html.match(/\((\d{6,})\)/);
     return match ? parseInt(match[1]) : null;
   } catch (err) {
@@ -162,15 +161,21 @@ async function scrapeLevelId(page) {
 }
 
 async function getDailyLevel() {
+  if (dailyCache.level && Date.now() < dailyCache.expiresAt) return dailyCache.level;
   const id = await scrapeLevelId('daily');
-  if (!id) return null;
-  return getLevelById(id);
+  if (!id) return dailyCache.level || null; // return stale if available
+  const level = await getLevelById(id);
+  if (level) { dailyCache.level = level; dailyCache.expiresAt = Date.now() + DAILY_TTL; }
+  return level;
 }
 
 async function getWeeklyDemon() {
+  if (weeklyCache.level && Date.now() < weeklyCache.expiresAt) return weeklyCache.level;
   const id = await scrapeLevelId('weekly');
-  if (!id) return null;
-  return getLevelById(id);
+  if (!id) return weeklyCache.level || null;
+  const level = await getLevelById(id);
+  if (level) { weeklyCache.level = level; weeklyCache.expiresAt = Date.now() + WEEKLY_TTL; }
+  return level;
 }
 
 // ─── Leaderboard ──────────────────────────────────────────────────────────────
