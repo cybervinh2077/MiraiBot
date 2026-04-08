@@ -192,15 +192,23 @@ async function getLeaderboard(type = 'top', count = 10) {
 }
 
 /**
- * Moderator list — GDBrowser: GET /api/leaderboard?type=moderators
- * Falls back to filtering top leaderboard if not available
+ * Moderator list — GDBrowser không có dedicated endpoint
+ * Fetch profile của danh sách mod đã biết từ community
+ * Ref: https://gdcolon.com/gd/mods (không có API)
  */
+const KNOWN_MODS = [
+  'RobTop','Colon','Wulzy','Viprin','Knobbelboy','Npesta','Sunix',
+  'Riot','Dorami','Serponge','Michigun','Manix648','Zobros','Cyclic',
+  'Alkali','Cvolton','Spu7nix','Woogi1411','Pennutoh','Giron',
+];
+
 async function getModeratorList() {
-  const data = await get('/leaderboard?type=moderators&count=50');
-  if (data && Array.isArray(data) && data.length) return data.map(mapPlayer);
-  // Fallback: top 100 and filter
-  const top = await getLeaderboard('top', 100);
-  return top.filter(p => p.modBadge > 0);
+  const results = await Promise.allSettled(
+    KNOWN_MODS.map(name => getPlayerProfile(name))
+  );
+  return results
+    .filter(r => r.status === 'fulfilled' && r.value?.modBadge > 0)
+    .map(r => r.value);
 }
 
 module.exports = {

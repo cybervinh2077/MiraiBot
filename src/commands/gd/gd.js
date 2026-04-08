@@ -261,16 +261,18 @@ async function cmdAccountUnlink(interaction, g, uid) {
 async function cmdModlist(interaction, g) {
   await interaction.deferReply();
   const mods = await api.getModeratorList();
-  if (!mods.length) return interaction.editReply(t(g, 'gd_modlist_empty'));
 
   const elders  = mods.filter(m => m.modBadge === 2).map(m => `👑 **${m.username}**`);
   const regular = mods.filter(m => m.modBadge === 1).map(m => `🛡️ ${m.username}`);
+  const allMods = [...elders, ...regular];
+
+  if (!allMods.length) return interaction.editReply(t(g, 'gd_modlist_empty'));
 
   const embed = new EmbedBuilder()
     .setTitle(t(g, 'gd_modlist_title'))
     .setColor(0xffd700)
-    .setDescription([...elders, ...regular].join('\n') || t(g, 'gd_modlist_empty'))
-    .setFooter({ text: t(g, 'gd_modlist_footer', { count: mods.length }) });
+    .setDescription(allMods.join('\n'))
+    .setFooter({ text: t(g, 'gd_modlist_footer', { count: allMods.length }) });
 
   await interaction.editReply({ embeds: [embed] });
 }
