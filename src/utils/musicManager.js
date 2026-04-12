@@ -302,16 +302,19 @@ const SOURCE_LABELS = {
   youtube:    { label: 'YouTube',      emoji: '🔴' },
 };
 
-function buildPlayerUI(song, paused = false, filter = 'default') {
+function buildPlayerUI(song, paused = false, filter = 'default', loopSong = false, loopQueue = false) {
   const filterInfo = AUDIO_FILTERS[filter] || AUDIO_FILTERS.default;
 
   // Source badge
   const src = SOURCE_LABELS[song.source] || SOURCE_LABELS.youtube;
   const sourceBadge = `${src.emoji} ${src.label}`;
 
+  // Loop state indicators
+  const loopIndicator = loopSong ? ' 🔂' : loopQueue ? ' 🔁' : '';
+
   const embed = new EmbedBuilder()
     .setColor(0x5865F2)
-    .setAuthor({ name: '🎵 Now Playing' })
+    .setAuthor({ name: `🎵 Now Playing${loopIndicator}` })
     .setTitle(song.title)
     .setURL(song.url)
     .addFields(
@@ -339,7 +342,26 @@ function buildPlayerUI(song, paused = false, filter = 'default') {
     new ButtonBuilder().setCustomId('music_vol_up').setLabel('+').setStyle(ButtonStyle.Secondary),
   );
 
-  // Row 2 — Audio Filters group 1
+  // Row 2 — loop & shuffle controls
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('music_loop_song')
+      .setEmoji('🔂')
+      .setLabel('Loop Song')
+      .setStyle(loopSong ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('music_loop_queue')
+      .setEmoji('🔁')
+      .setLabel('Loop Queue')
+      .setStyle(loopQueue ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('music_shuffle')
+      .setEmoji('🔀')
+      .setLabel('Shuffle')
+      .setStyle(ButtonStyle.Secondary),
+  );
+
+  // Row 3 — Audio Filters group 1
   const filterSelect1 = new StringSelectMenuBuilder()
     .setCustomId('music_filter_1')
     .setPlaceholder(`🎛 Audio Filters (1) — ${FILTER_GROUP_1.includes(filter) && filter !== 'default' ? filterInfo.label : 'Default'}`)
@@ -348,7 +370,7 @@ function buildPlayerUI(song, paused = false, filter = 'default') {
       return { label: f.label, value: key, emoji: f.emoji, default: key === filter };
     }));
 
-  // Row 3 — Audio Filters group 2
+  // Row 4 — Audio Filters group 2
   const filterSelect2 = new StringSelectMenuBuilder()
     .setCustomId('music_filter_2')
     .setPlaceholder(`🎛 Audio Filters (2) — ${FILTER_GROUP_2.includes(filter) ? filterInfo.label : 'Select...'}`)
@@ -357,10 +379,10 @@ function buildPlayerUI(song, paused = false, filter = 'default') {
       return { label: f.label, value: key, emoji: f.emoji, default: key === filter };
     }));
 
-  const row2 = new ActionRowBuilder().addComponents(filterSelect1);
-  const row3 = new ActionRowBuilder().addComponents(filterSelect2);
+  const row3 = new ActionRowBuilder().addComponents(filterSelect1);
+  const row4 = new ActionRowBuilder().addComponents(filterSelect2);
 
-  return { embeds: [embed], components: [row1, row2, row3] };
+  return { embeds: [embed], components: [row1, row2, row3, row4] };
 }
 
 async function getAudioUrl(songUrl) {
@@ -505,7 +527,7 @@ async function playSong(queue, song) {
       queue.playerMessage = null;
     }
 
-    queue.playerMessage = await queue.textChannel.send(buildPlayerUI(song, false, queue.filter || 'default'));
+    queue.playerMessage = await queue.textChannel.send(buildPlayerUI(song, false, queue.filter || 'default', queue.loop, queue.loopQueue));
   } catch (err) {
     const { t } = require('./i18n');
     console.error('Play error:', err.message);

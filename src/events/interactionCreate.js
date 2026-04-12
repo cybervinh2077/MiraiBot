@@ -93,7 +93,7 @@ module.exports = {
         const isPaused = queue.player.state.status === AudioPlayerStatus.Paused;
         isPaused ? queue.player.unpause() : queue.player.pause();
         if (queue.playerMessage) {
-          await queue.playerMessage.edit(buildPlayerUI(queue.current, !isPaused, queue.filter || 'default')).catch(() => {});
+          await queue.playerMessage.edit(buildPlayerUI(queue.current, !isPaused, queue.filter || 'default', queue.loop, queue.loopQueue)).catch(() => {});
         }
         break;
       }
@@ -138,6 +138,25 @@ module.exports = {
       case 'music_loop':
         queue.loop = !queue.loop;
         queue.loopQueue = false;
+        if (queue.playerMessage && queue.current) {
+          await queue.playerMessage.edit(buildPlayerUI(queue.current, false, queue.filter || 'default', queue.loop, queue.loopQueue)).catch(() => {});
+        }
+        break;
+
+      case 'music_loop_song':
+        queue.loop = !queue.loop;
+        queue.loopQueue = false;
+        if (queue.playerMessage && queue.current) {
+          await queue.playerMessage.edit(buildPlayerUI(queue.current, false, queue.filter || 'default', queue.loop, queue.loopQueue)).catch(() => {});
+        }
+        break;
+
+      case 'music_loop_queue':
+        queue.loopQueue = !queue.loopQueue;
+        queue.loop = false;
+        if (queue.playerMessage && queue.current) {
+          await queue.playerMessage.edit(buildPlayerUI(queue.current, false, queue.filter || 'default', queue.loop, queue.loopQueue)).catch(() => {});
+        }
         break;
 
       case 'music_shuffle': {
