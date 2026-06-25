@@ -135,7 +135,20 @@ function buildHelpEmbeds(guildId) {
       ].join('\n'),
     });
 
-  return [account, music, fun, rp, utility, poker, gd];
+  const osu = new EmbedBuilder()
+    .setColor(0xff66aa)
+    .addFields({
+      name: t(g, 'help_section_osu'),
+      value: [
+        t(g, 'help_cmd_osu_profile'),
+        t(g, 'help_cmd_osu_top'),
+        t(g, 'help_cmd_osu_recent'),
+        t(g, 'help_cmd_osu_beatmap'),
+        t(g, 'help_cmd_osu_link'),
+      ].join('\n'),
+    });
+
+  return [account, music, fun, rp, utility, poker, gd, osu];
 }
 
 module.exports = { buildHelpEmbeds };
