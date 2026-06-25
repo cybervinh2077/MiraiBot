@@ -88,13 +88,17 @@ module.exports = {
 
     await interaction.deferUpdate();
 
+    const refreshUI = async () => {
+      if (queue.playerMessage && queue.current) {
+        await queue.playerMessage.edit(buildPlayerUI(queue)).catch(() => {});
+      }
+    };
+
     switch (customId) {
       case 'music_pause': {
         const isPaused = queue.player.state.status === AudioPlayerStatus.Paused;
         isPaused ? queue.player.unpause() : queue.player.pause();
-        if (queue.playerMessage) {
-          await queue.playerMessage.edit(buildPlayerUI(queue.current, !isPaused, queue.filter || 'default', queue.loop, queue.loopQueue)).catch(() => {});
-        }
+        await refreshUI();
         break;
       }
       case 'music_skip':
@@ -105,6 +109,7 @@ module.exports = {
         queue.songs = [];
         queue.loop = false;
         queue.loopQueue = false;
+        queue.autoplay = null;
         queue.player.stop();
         if (queue.playerMessage) {
           await queue.playerMessage.edit({ content: '⏹️ Đã dừng nhạc.', embeds: [], components: [] }).catch(() => {});
@@ -115,48 +120,38 @@ module.exports = {
       case 'music_prev':
         // Phát lại bài hiện tại từ đầu
         if (queue.current) {
+          queue.songs.unshift(queue.current);
           queue.player.stop();
-          queue.songs.unshift(queue.current);
-          queue.songs.unshift(queue.current);
         }
         break;
 
       case 'music_vol_down': {
-        queue.volume = Math.max(0, queue.volume - 0.1);
+        queue.volume = Math.max(0, Math.round((queue.volume - 0.1) * 10) / 10);
         if (queue.player.state.resource?.volume) {
           queue.player.state.resource.volume.setVolume(queue.volume);
         }
+        await refreshUI();
         break;
       }
       case 'music_vol_up': {
-        queue.volume = Math.min(2, queue.volume + 0.1);
+        queue.volume = Math.min(2, Math.round((queue.volume + 0.1) * 10) / 10);
         if (queue.player.state.resource?.volume) {
           queue.player.state.resource.volume.setVolume(queue.volume);
         }
+        await refreshUI();
         break;
       }
       case 'music_loop':
-        queue.loop = !queue.loop;
-        queue.loopQueue = false;
-        if (queue.playerMessage && queue.current) {
-          await queue.playerMessage.edit(buildPlayerUI(queue.current, false, queue.filter || 'default', queue.loop, queue.loopQueue)).catch(() => {});
-        }
-        break;
-
       case 'music_loop_song':
         queue.loop = !queue.loop;
         queue.loopQueue = false;
-        if (queue.playerMessage && queue.current) {
-          await queue.playerMessage.edit(buildPlayerUI(queue.current, false, queue.filter || 'default', queue.loop, queue.loopQueue)).catch(() => {});
-        }
+        await refreshUI();
         break;
 
       case 'music_loop_queue':
         queue.loopQueue = !queue.loopQueue;
         queue.loop = false;
-        if (queue.playerMessage && queue.current) {
-          await queue.playerMessage.edit(buildPlayerUI(queue.current, false, queue.filter || 'default', queue.loop, queue.loopQueue)).catch(() => {});
-        }
+        await refreshUI();
         break;
 
       case 'music_shuffle': {
@@ -164,6 +159,7 @@ module.exports = {
           const j = Math.floor(Math.random() * (i + 1));
           [queue.songs[i], queue.songs[j]] = [queue.songs[j], queue.songs[i]];
         }
+        await refreshUI();
         break;
       }
       case 'music_queue': {

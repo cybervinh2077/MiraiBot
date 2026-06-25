@@ -354,63 +354,78 @@ const SOURCE_LABELS = {
   youtube:    { label: 'YouTube',      emoji: '🔴' },
 };
 
-function buildPlayerUI(song, paused = false, filter = 'default', loopSong = false, loopQueue = false) {
+// Thanh tiến trình tượng trưng cho volume (0..200% → 0..10 ô)
+function volumeBar(volume) {
+  const filled = Math.max(0, Math.min(10, Math.round((volume / 2) * 10)));
+  return '▰'.repeat(filled) + '▱'.repeat(10 - filled);
+}
+
+/**
+ * Dựng giao diện player. Nhận nguyên `queue` để lấy đủ trạng thái
+ * (bài hiện tại, volume, queue, filter, loop, pause).
+ */
+function buildPlayerUI(queue) {
+  const song      = queue.current;
+  const filter    = queue.filter || 'default';
+  const loopSong  = queue.loop;
+  const loopQueue = queue.loopQueue;
+  const volume    = queue.volume ?? 1;
+  const upNext    = queue.songs?.[0];
+  const queueLen  = queue.songs?.length || 0;
+  const paused    = queue.player?.state?.status === AudioPlayerStatus.Paused;
+
   const filterInfo = AUDIO_FILTERS[filter] || AUDIO_FILTERS.default;
+  const src        = SOURCE_LABELS[song.source] || SOURCE_LABELS.youtube;
+  const volPct     = Math.round(volume * 100);
 
-  // Source badge
-  const src = SOURCE_LABELS[song.source] || SOURCE_LABELS.youtube;
-  const sourceBadge = `${src.emoji} ${src.label}`;
-
-  // Loop state indicators
-  const loopIndicator = loopSong ? ' 🔂' : loopQueue ? ' 🔁' : '';
+  // Footer: nguồn • trạng thái loop • filter (footer không render mention)
+  const loopLabel = loopSong ? '🔂 Lặp bài' : loopQueue ? '🔁 Lặp queue' : null;
+  const footerParts = [
+    `${src.emoji} ${src.label}`,
+    loopLabel,
+    filter !== 'default' ? `${filterInfo.emoji} ${filterInfo.label}` : null,
+    queue.autoplay ? '🎲 Autoplay' : null,
+  ].filter(Boolean);
 
   const embed = new EmbedBuilder()
-    .setColor(0x5865F2)
-    .setAuthor({ name: `🎵 Now Playing${loopIndicator}` })
+    .setColor(paused ? 0x99AAB5 : 0x5865F2)
+    .setAuthor({ name: paused ? '⏸️  Đang tạm dừng' : '🎵  Đang phát' })
     .setTitle(song.title)
     .setURL(song.url)
     .addFields(
-      { name: 'Queue',   value: 'Use </queue:0>',   inline: true },
-      { name: 'Skip',    value: 'Use </skip:0>',    inline: true },
-      { name: 'Skip to', value: 'Use </skipto:0>',  inline: true },
-    )
-    .setFooter({
-      text: [
-        `⏱ ${song.duration}`,
-        song.requestedBy ? `Requested by <@${song.requestedBy}>` : null,
-        sourceBadge,
-        filter !== 'default' ? `Filter: ${filterInfo.label}` : null,
-      ].filter(Boolean).join(' • '),
+      { name: '⏱️ Thời lượng', value: `\`${song.duration}\``, inline: true },
+      { name: '🙋 Yêu cầu bởi', value: song.requestedBy ? `<@${song.requestedBy}>` : '—', inline: true },
+      { name: `🔊 Âm lượng — ${volPct}%`, value: `\`${volumeBar(volume)}\``, inline: true },
+    );
+
+  if (upNext) {
+    embed.addFields({
+      name: queueLen > 1 ? `🎶 Tiếp theo  ·  +${queueLen - 1} bài trong queue` : '🎶 Tiếp theo',
+      value: `${upNext.title} \`[${upNext.duration}]\``,
+      inline: false,
     });
+  }
+
+  embed.setFooter({ text: footerParts.join('  •  ') });
 
   if (song.thumbnail) embed.setImage(song.thumbnail.replace('default', 'maxresdefault').replace('hqdefault', 'maxresdefault'));
 
-  // Row 1 — playback controls
+  // Row 1 — điều khiển phát: trước · play/pause · skip · stop · queue
   const row1 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('music_vol_down').setLabel('−').setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder().setCustomId('music_stop').setEmoji('🔴').setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId('music_pause').setEmoji(paused ? '▶️' : '⏸').setStyle(paused ? ButtonStyle.Success : ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('music_skip').setEmoji('⏩').setStyle(ButtonStyle.Primary),
-    new ButtonBuilder().setCustomId('music_vol_up').setLabel('+').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_prev').setEmoji('⏮️').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_pause').setEmoji(paused ? '▶️' : '⏸️').setStyle(paused ? ButtonStyle.Success : ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('music_skip').setEmoji('⏭️').setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId('music_stop').setEmoji('⏹️').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('music_queue').setEmoji('📜').setLabel('Queue').setStyle(ButtonStyle.Secondary),
   );
 
-  // Row 2 — loop & shuffle controls
+  // Row 2 — âm lượng & chế độ: vol− · vol+ · loop bài · loop queue · shuffle
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder()
-      .setCustomId('music_loop_song')
-      .setEmoji('🔂')
-      .setLabel('Loop Song')
-      .setStyle(loopSong ? ButtonStyle.Success : ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('music_loop_queue')
-      .setEmoji('🔁')
-      .setLabel('Loop Queue')
-      .setStyle(loopQueue ? ButtonStyle.Success : ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('music_shuffle')
-      .setEmoji('🔀')
-      .setLabel('Shuffle')
-      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_vol_down').setEmoji('🔉').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_vol_up').setEmoji('🔊').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_loop_song').setEmoji('🔂').setStyle(loopSong ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_loop_queue').setEmoji('🔁').setStyle(loopQueue ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('music_shuffle').setEmoji('🔀').setStyle(ButtonStyle.Secondary),
   );
 
   // Row 3 — Audio Filters group 1
@@ -583,7 +598,7 @@ async function playSong(queue, song) {
       queue.playerMessage = null;
     }
 
-    queue.playerMessage = await queue.textChannel.send(buildPlayerUI(song, false, queue.filter || 'default', queue.loop, queue.loopQueue));
+    queue.playerMessage = await queue.textChannel.send(buildPlayerUI(queue));
   } catch (err) {
     const { t } = require('./i18n');
     console.error('Play error:', err.message);
