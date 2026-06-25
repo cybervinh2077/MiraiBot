@@ -112,10 +112,29 @@ async function handleCommand(chatId, text) {
     return sendMessage(chatId,
       `<b>🤖 MiraiBot Control</b>\n\n` +
       `/status — Thông tin bot và hệ thống\n` +
+      `/redeploy — Ép deploy lại từ origin/main (reset cứng + restart)\n` +
       `/getlog — Lấy log Discord bot (50 dòng cuối)\n` +
       `/getlog_full — Tải toàn bộ file log\n` +
       `/getlog_err — Log lỗi (50 dòng cuối)`
     );
+  }
+
+  if (cmd === '/redeploy') {
+    const repo = path.join(__dirname, '../..');
+    await sendMessage(chatId, '♻️ Đang ép deploy lại từ <code>origin/main</code>...');
+    try {
+      execSync('git fetch origin main', { cwd: repo });
+      execSync('git reset --hard origin/main', { cwd: repo });
+      execSync('npm install --omit=dev', { cwd: repo });
+      const short = execSync('git rev-parse --short HEAD', { cwd: repo }).toString().trim();
+      const msg = execSync('git log -1 --pretty=%s', { cwd: repo }).toString().trim();
+      // Gửi xác nhận TRƯỚC khi pm2 restart (lệnh dưới sẽ kill chính process này)
+      await sendMessage(chatId, `✅ Đã cập nhật về <code>${short}</code>\n📝 ${msg}\n♻️ Đang khởi động lại bot...`);
+      execSync('pm2 restart miraibot --update-env', { cwd: repo });
+      return;
+    } catch (e) {
+      return sendMessage(chatId, `❌ Redeploy lỗi:\n<pre>${String(e.stderr || e.message || e).slice(0, 800).replace(/</g, '&lt;')}</pre>`);
+    }
   }
 
   if (cmd === '/status') {
