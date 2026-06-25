@@ -279,6 +279,57 @@ async function searchYoutubeList(query) {
   }));
 }
 
+// ─── Autoplay ───────────────────────────────────────────────────────────────
+// Các "flavor" thêm vào query để đa dạng kết quả mỗi lần nạp thêm bài
+const AUTOPLAY_FLAVORS = ['', 'mix', 'best songs', 'playlist', 'top hits', 'greatest hits', 'official audio', 'remix', 'new songs', 'live'];
+
+/**
+ * Nạp thêm bài cho chế độ autoplay: search YouTube theo queue.autoplay.query,
+ * loại bỏ các video đã phát (seen), rồi push vào queue.songs.
+ * Trả về số bài đã thêm.
+ */
+async function refillAutoplay(queue, target = 5) {
+  const ap = queue.autoplay;
+  if (!ap) return 0;
+  if (queue._autoplayLoading) return 0;
+  queue._autoplayLoading = true;
+  try {
+    let added = 0;
+    const flavors = [...AUTOPLAY_FLAVORS].sort(() => Math.random() - 0.5);
+    for (const flavor of flavors) {
+      if (added >= target) break;
+      const q = flavor ? `${ap.query} ${flavor}` : ap.query;
+      const results = await searchYoutubeList(q).catch(() => []);
+      const fresh = results.filter(r => r.videoId && !ap.seen.has(r.videoId));
+      if (!fresh.length) continue;
+
+      const ids = [];
+      for (const r of fresh) {
+        if (added + ids.length >= target) break;
+        ap.seen.add(r.videoId); // đánh dấu ngay để không trùng giữa các flavor
+        ids.push(r.videoId);
+      }
+      if (!ids.length) continue;
+
+      const songs = await getVideosByIds(ids).catch(() => []);
+      for (const s of songs) {
+        s.requestedBy = ap.requestedBy;
+        s.source = 'youtube';
+        queue.songs.push(s);
+        added++;
+      }
+    }
+    // Giới hạn kích thước seen để tránh phình bộ nhớ khi chạy lâu
+    if (ap.seen.size > 500) {
+      const arr = [...ap.seen];
+      ap.seen = new Set(arr.slice(arr.length - 250));
+    }
+    return added;
+  } finally {
+    queue._autoplayLoading = false;
+  }
+}
+
 function parseDuration(iso) {
   const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (!match) return '??:??';
@@ -540,15 +591,40 @@ function playNext(queue) {
   if (queue.loop && queue.current) return playSong(queue, queue.current);
   if (queue.loopQueue && queue.current) queue.songs.push(queue.current);
 
+  // Autoplay: chủ động nạp thêm bài trong background khi queue sắp hết
+  if (queue.autoplay && queue.songs.length <= 1) {
+    refillAutoplay(queue).catch(() => {});
+  }
+
   const next = queue.songs.shift();
-  if (!next) {
-    const { t } = require('./i18n');
+  if (next) return playSong(queue, next);
+
+  // Queue rỗng
+  const { t } = require('./i18n');
+
+  // Autoplay: thử nạp thêm bài để phát liên tục
+  if (queue.autoplay) {
     queue.current = null;
-    startIdleTimer(queue);
-    queue.textChannel.send(t(queue.guildId, 'music_queue_end'));
+    refillAutoplay(queue)
+      .then((added) => {
+        const n = queue.songs.shift();
+        if (n) return playSong(queue, n);
+        // Không tìm được bài mới → tắt autoplay và kết thúc
+        queue.autoplay = null;
+        startIdleTimer(queue);
+        queue.textChannel.send(t(queue.guildId, 'music_autoplay_exhausted'));
+      })
+      .catch(() => {
+        queue.autoplay = null;
+        startIdleTimer(queue);
+        queue.textChannel.send(t(queue.guildId, 'music_queue_end'));
+      });
     return;
   }
-  playSong(queue, next);
+
+  queue.current = null;
+  startIdleTimer(queue);
+  queue.textChannel.send(t(queue.guildId, 'music_queue_end'));
 }
 
 async function connect(queue) {
@@ -581,4 +657,4 @@ async function connect(queue) {
   });
 }
 
-module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, getVideoDetails, getVideosByIds, getPlaylistItems, extractPlaylistId, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl, AUDIO_FILTERS };
+module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, getVideoDetails, getVideosByIds, getPlaylistItems, extractPlaylistId, extractVideoId, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl, refillAutoplay, AUDIO_FILTERS };

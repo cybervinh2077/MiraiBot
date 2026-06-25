@@ -25,6 +25,7 @@ function buildHelpEmbeds(guildId) {
       name: t(g, 'help_section_music'),
       value: [
         t(g, 'help_cmd_play_short'),
+        t(g, 'help_cmd_autoplay_short'),
         t(g, 'help_cmd_skip_short'),
         t(g, 'help_cmd_stop_short'),
         t(g, 'help_cmd_pause_short'),

@@ -11,6 +11,7 @@ const {
   getPlaylistItems,
   extractPlaylistId,
   clearIdleTimer,
+  refillAutoplay,
 } = require('../utils/musicManager');
 const { getLyrics } = require('../utils/lyrics');
 const { AudioPlayerStatus } = require('@discordjs/voice');
@@ -37,6 +38,9 @@ async function handleMusic(msg, command, args) {
     case '?play':
     case '?p':
       return cmdPlay(msg, args, voiceChannel);
+    case '?autoplay':
+    case '?ap':
+      return cmdAutoplay(msg, args, voiceChannel);
     case '?skip':
     case '?s':
       return cmdSkip(msg);
@@ -147,6 +151,56 @@ async function cmdPlay(msg, args, voiceChannel) {
   collector.on('end', (collected) => {
     if (!collected.size) searching.edit({ content: t(g, 'music_timeout'), embeds: [], components: [] }).catch(() => {});
   });
+}
+
+// Autoplay: tự tìm và phát nhạc liên tục theo chủ đề / thể loại / nghệ sĩ
+async function cmdAutoplay(msg, args, voiceChannel) {
+  const g = gid(msg);
+  const raw = (Array.isArray(args) ? args.join(' ') : String(args || '')).trim();
+
+  // Tắt autoplay
+  if (['off', 'stop', 'tắt', 'tat'].includes(raw.toLowerCase())) {
+    const queue = getQueue(msg.guild.id);
+    if (queue?.autoplay) {
+      queue.autoplay = null;
+      return msg.reply(t(g, 'music_autoplay_off'));
+    }
+    return msg.reply(t(g, 'music_autoplay_not_on'));
+  }
+
+  if (!raw) return msg.reply(t(g, 'music_autoplay_no_query'));
+
+  const statusMsg = await msg.reply(t(g, 'music_autoplay_searching', { query: raw }));
+
+  let queue = getQueue(msg.guild.id);
+  const freshQueue = !queue;
+  if (!queue) {
+    queue = createQueue(msg.guild.id, voiceChannel, msg.channel);
+    try {
+      await connect(queue);
+    } catch {
+      deleteQueue(msg.guild.id);
+      return statusMsg.edit(t(g, 'music_no_voice_connect'));
+    }
+  }
+
+  // Bật autoplay rồi nạp đợt bài đầu tiên (dùng chung code path với auto-refill)
+  queue.autoplay = { query: raw, seen: new Set(), requestedBy: msg.author.id };
+
+  const added = await refillAutoplay(queue, 5).catch(() => 0);
+  if (!added) {
+    queue.autoplay = null;
+    if (freshQueue) deleteQueue(msg.guild.id);
+    return statusMsg.edit(t(g, 'music_no_results'));
+  }
+
+  if (!queue.current) {
+    clearIdleTimer(queue);
+    await statusMsg.edit({ content: t(g, 'music_autoplay_started', { query: raw }), components: [] });
+    playSong(queue, queue.songs.shift());
+  } else {
+    await statusMsg.edit({ content: t(g, 'music_autoplay_added', { query: raw }), components: [] });
+  }
 }
 
 async function playDirect(msg, url, voiceChannel) {
@@ -523,7 +577,7 @@ async function handleMusicSlash(interaction, command) {
   };
 
   // Defer cho các lệnh cần thời gian
-  if (['play', 'lyrics'].includes(command)) {
+  if (['play', 'autoplay', 'lyrics'].includes(command)) {
     await interaction.deferReply();
     msg.reply = (content) => {
       if (typeof content === 'string') content = { content };
@@ -535,6 +589,10 @@ async function handleMusicSlash(interaction, command) {
     case 'play': {
       const query = interaction.options.getString('query');
       return cmdPlay(msg, [query], voiceChannel);
+    }
+    case 'autoplay': {
+      const query = interaction.options.getString('query');
+      return cmdAutoplay(msg, [query], voiceChannel);
     }
     case 'skip': return cmdSkip(msg);
     case 'stop': return cmdStop(msg);
