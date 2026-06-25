@@ -85,6 +85,18 @@ function setPrefix(guildId, prefix) {
   saveSessions(guildSessions);
 }
 
+// Channel nhận thông báo level-up theo guild (null = gửi tại channel tin nhắn)
+function getLevelChannel(guildId) {
+  const session = guildSessions.get(guildId);
+  return session?.levelChannel || null;
+}
+
+function setLevelChannel(guildId, channelId) {
+  const session = guildSessions.get(guildId) || {};
+  guildSessions.set(guildId, { ...session, levelChannel: channelId || null });
+  saveSessions(guildSessions);
+}
+
 function getGuildLang(guildId) {
   const session = guildSessions.get(guildId);
   return session?.lang || 'vn';
@@ -96,4 +108,4 @@ function setGuildLang(guildId, lang) {
   saveSessions(guildSessions);
 }
 
-module.exports = { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, setPrefix, getGuildLang, setGuildLang };
+module.exports = { isGuildAuthed, setGuildAuth, getGuildAuth, clearGuildAuth, getPrefix, setPrefix, getLevelChannel, setLevelChannel, getGuildLang, setGuildLang };

@@ -254,6 +254,7 @@ module.exports = {
   help_section_level:      '📊 Level',
   help_cmd_rank_short:     '`/rank [@user]` — Xem level và XP',
   help_cmd_leaderboard_short: '`/leaderboard` — Top 10 thành viên tích cực nhất',
+  help_cmd_setup_short:    '`/setup` — Cấu hình bot (channel thông báo level-up...)',
   help_cmd_ping_short:     '`/ping` — Kiểm tra độ trễ và thông tin hệ thống',
   help_cmd_help_short:     '`/help` — Hiện hướng dẫn này',
   help_section_poke_start:   '🎮 Pokémon — Bắt đầu',
@@ -279,6 +280,12 @@ module.exports = {
   // Auto messages
   voice_empty_leave: '👋 Không còn ai trong kênh voice. Bot đã rời và xóa queue.',
   level_up: '🎉 {user} đã lên **Level {level}**!',
+  setup_no_perm: '❌ Bạn cần quyền **Quản lý Máy chủ** để dùng lệnh này.',
+  setup_level_set: '✅ Thông báo lên cấp sẽ được gửi vào {channel}.',
+  setup_level_off: '✅ Đã tắt channel riêng. Thông báo lên cấp sẽ gửi ngay tại nơi nhắn tin.',
+  setup_status_title: '⚙️ **Cấu hình server**',
+  setup_status_level_on: '• Channel thông báo level-up: {channel}',
+  setup_status_level_off: '• Channel thông báo level-up: *chưa đặt* (gửi tại nơi nhắn tin)',
 
   // ─── Poker ────────────────────────────────────────────────────────────────
   poker_error_generic:        '❌ Có lỗi xảy ra trong game poker. Thử lại sau.',

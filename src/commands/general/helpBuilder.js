@@ -98,55 +98,12 @@ function buildHelpEmbeds(guildId) {
       {
         name: t(g, 'help_section_other'),
         value: [
+          t(g, 'help_cmd_setup_short'),
           t(g, 'help_cmd_ping_short'),
           t(g, 'help_cmd_help_short'),
         ].join('\n'),
       },
     );
-
-  const pokemon = new EmbedBuilder()
-    .setColor(0xffcb05)
-    .addFields(
-      {
-        name: t(g, 'help_section_poke_start'),
-        value: [
-          t(g, 'help_cmd_poke_start'),
-          t(g, 'help_cmd_poke_catch'),
-          t(g, 'help_cmd_poke_profile'),
-          t(g, 'help_cmd_poke_list'),
-          t(g, 'help_cmd_poke_info'),
-          t(g, 'help_cmd_poke_dex'),
-        ].join('\n'),
-      },
-      {
-        name: t(g, 'help_section_poke_battle'),
-        value: [
-          t(g, 'help_cmd_poke_duel'),
-          t(g, 'help_cmd_poke_evolve'),
-        ].join('\n'),
-      },
-      {
-        name: t(g, 'help_section_poke_economy'),
-        value: [
-          t(g, 'help_cmd_poke_trade'),
-          t(g, 'help_cmd_poke_daily'),
-          t(g, 'help_cmd_poke_balance'),
-          t(g, 'help_cmd_poke_shop'),
-          t(g, 'help_cmd_poke_buy'),
-          t(g, 'help_cmd_poke_item'),
-        ].join('\n'),
-      },
-    )
-    .setFooter({ text: t(g, 'help_poke_footer') });
-
-  const dnd = new EmbedBuilder()
-    .setColor(0x8b0000)
-    .addFields({
-      name: t(g, 'help_section_dnd'),
-      value: [
-        t(g, 'help_cmd_dnd_list'),
-      ].join('\n'),
-    });
 
   const poker = new EmbedBuilder()
     .setColor(0x1a6b3c)
@@ -178,7 +135,7 @@ function buildHelpEmbeds(guildId) {
       ].join('\n'),
     });
 
-  return [account, music, fun, rp, utility, pokemon, dnd, poker, gd];
+  return [account, music, fun, rp, utility, poker, gd];
 }
 
 module.exports = { buildHelpEmbeds };

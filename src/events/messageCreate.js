@@ -1,5 +1,5 @@
 const { addXp } = require('../utils/leveling');
-const { onMessageForSpawn } = require('../pokemon/pokemonEngine');
+const { getLevelChannel } = require('../utils/guildAuth');
 const { t } = require('../utils/i18n');
 
 module.exports = {
@@ -10,12 +10,18 @@ module.exports = {
 
     // Level system
     addXp(msg).then(({ leveledUp, userData }) => {
-      if (leveledUp) {
-        msg.channel.send(t(msg.guild.id, 'level_up', { user: msg.author.toString(), level: userData.level })).catch(() => {});
-      }
-    }).catch(err => console.error('Level system error:', err));
+      if (!leveledUp) return;
 
-    // Pokémon spawn
-    onMessageForSpawn(msg).catch(err => console.error('Pokemon spawn error:', err));
+      // Gửi thông báo lên channel đã được /setup chỉ định (nếu có),
+      // nếu chưa cấu hình thì gửi ngay tại channel của tin nhắn.
+      let target = msg.channel;
+      const channelId = getLevelChannel(msg.guild.id);
+      if (channelId) {
+        const ch = msg.guild.channels.cache.get(channelId);
+        if (ch?.isTextBased?.()) target = ch;
+      }
+
+      target.send(t(msg.guild.id, 'level_up', { user: msg.author.toString(), level: userData.level })).catch(() => {});
+    }).catch(err => console.error('Level system error:', err));
   },
 };

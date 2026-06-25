@@ -254,6 +254,7 @@ module.exports = {
   help_section_level:      '📊 Level',
   help_cmd_rank_short:     '`/rank [@user]` — View level and XP',
   help_cmd_leaderboard_short: '`/leaderboard` — Top 10 most active members',
+  help_cmd_setup_short:    '`/setup` — Configure the bot (level-up channel, ...)',
   help_cmd_ping_short:     '`/ping` — Check latency and system info',
   help_cmd_help_short:     '`/help` — Show this guide',
   help_section_poke_start:   '🎮 Pokémon — Getting Started',
@@ -279,6 +280,12 @@ module.exports = {
   // Auto messages
   voice_empty_leave: '👋 No one left in the voice channel. Bot has left and cleared the queue.',
   level_up: '🎉 {user} reached **Level {level}**!',
+  setup_no_perm: '❌ You need the **Manage Server** permission to use this command.',
+  setup_level_set: '✅ Level-up announcements will be sent to {channel}.',
+  setup_level_off: '✅ Dedicated channel disabled. Level-up announcements will be sent where the message is.',
+  setup_status_title: '⚙️ **Server configuration**',
+  setup_status_level_on: '• Level-up channel: {channel}',
+  setup_status_level_off: '• Level-up channel: *not set* (sent in the message channel)',
 
   // ─── Poker ────────────────────────────────────────────────────────────────
   poker_error_generic:        '❌ An error occurred in the poker game. Please try again.',

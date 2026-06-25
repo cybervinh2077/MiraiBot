@@ -254,6 +254,7 @@ module.exports = {
   help_section_level:      '📊 レベル',
   help_cmd_rank_short:     '`/rank [@user]` — レベルとXPを表示',
   help_cmd_leaderboard_short: '`/leaderboard` — アクティブメンバートップ10',
+  help_cmd_setup_short:    '`/setup` — ボットの設定（レベルアップ通知チャンネルなど）',
   help_cmd_ping_short:     '`/ping` — 遅延とシステム情報を確認',
   help_cmd_help_short:     '`/help` — このガイドを表示',
   help_section_poke_start:   '🎮 ポケモン — はじめに',
@@ -279,6 +280,12 @@ module.exports = {
   // Auto messages
   voice_empty_leave: '👋 ボイスチャンネルに誰もいなくなりました。ボットが退出してキューをクリアしました。',
   level_up: '🎉 {user} が **レベル {level}** になりました！',
+  setup_no_perm: '❌ このコマンドには **サーバー管理** 権限が必要です。',
+  setup_level_set: '✅ レベルアップ通知は {channel} に送信されます。',
+  setup_level_off: '✅ 専用チャンネルを無効にしました。レベルアップ通知はメッセージのあった場所に送信されます。',
+  setup_status_title: '⚙️ **サーバー設定**',
+  setup_status_level_on: '• レベルアップ通知チャンネル: {channel}',
+  setup_status_level_off: '• レベルアップ通知チャンネル: *未設定*（メッセージのあった場所に送信）',
 
   // ─── Poker ────────────────────────────────────────────────────────────────
   poker_error_generic:        '❌ ポーカーゲームでエラーが発生しました。後でもう一度お試しください。',
