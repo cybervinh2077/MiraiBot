@@ -4,6 +4,7 @@ const {
   createAudioResource,
   AudioPlayerStatus,
   VoiceConnectionStatus,
+  StreamType,
   entersState,
 } = require('@discordjs/voice');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
@@ -551,8 +552,9 @@ async function playSong(queue, song) {
       '-i', audioUrl,
       '-vn',
       ...filterArgs,
-      '-acodec', 'libopus',
-      '-f', 'opus',
+      // Xuất PCM thô (s16le) thay vì Opus — bắt buộc để inline volume hoạt động.
+      // discord.js sẽ tự encode lại sang Opus (qua @discordjs/opus).
+      '-f', 's16le',
       '-ar', '48000',
       '-ac', '2',
       'pipe:1',
@@ -569,7 +571,10 @@ async function playSong(queue, song) {
       console.error('ffmpeg spawn error:', err.message);
     });
 
-    const resource = createAudioResource(ffmpeg.stdout, { inlineVolume: true });
+    const resource = createAudioResource(ffmpeg.stdout, {
+      inputType: StreamType.Raw, // PCM s16le 48kHz stereo
+      inlineVolume: true,
+    });
     resource.volume?.setVolume(queue.volume);
     queue.player.play(resource);
 
