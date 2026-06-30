@@ -12,6 +12,7 @@ const {
   extractPlaylistId,
   clearIdleTimer,
   refillAutoplay,
+  getAudioUrl,
 } = require('../utils/musicManager');
 const { getLyrics } = require('../utils/lyrics');
 const { AudioPlayerStatus } = require('@discordjs/voice');
@@ -134,6 +135,9 @@ async function cmdPlay(msg, args, voiceChannel) {
     const [videoId, idx] = interaction.values[0].split('|');
     await searching.edit({ content: t(g, 'music_loading', { title: results[parseInt(idx)].title }), embeds: [], components: [] });
 
+    // Bắt đầu prefetch audio URL ngay khi user chọn bài, chạy song song với getVideoById + connect
+    getAudioUrl(`https://www.youtube.com/watch?v=${videoId}`).catch(() => {});
+
     let song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
     if (!song) {
       const sr = results[parseInt(idx)];
@@ -206,7 +210,11 @@ async function cmdAutoplay(msg, args, voiceChannel) {
 async function playDirect(msg, url, voiceChannel) {
   const g = gid(msg);
   const searching = await msg.reply(t(g, 'music_loading', { title: url }));
-  const song = await searchYoutube(url).catch(() => null);
+  // Chạy song song: lấy metadata + prefetch audio URL
+  const [song] = await Promise.all([
+    searchYoutube(url).catch(() => null),
+    getAudioUrl(url).catch(() => {}),
+  ]);
   if (!song) return searching.edit(t(g, 'music_load_fail'));
   song.requestedBy = msg.author.id;
   song.source = 'youtube';
@@ -344,14 +352,18 @@ async function playExternalSource(msg, url, source, voiceChannel) {
   }
 }
 
-async function addToQueue(msg, song, voiceChannel, replyMsg) {  const g = gid(msg);
+async function addToQueue(msg, song, voiceChannel, replyMsg) {
+  const g = gid(msg);
   let queue = getQueue(msg.guild.id);
 
   if (!queue) {
     queue = createQueue(msg.guild.id, voiceChannel, msg.channel);
-    try {
-      await connect(queue);
-    } catch {
+    // Chạy song song: join voice channel + prefetch audio URL → tiết kiệm 1-3 giây
+    const [connectResult] = await Promise.allSettled([
+      connect(queue),
+      getAudioUrl(song.url).catch(() => {}),
+    ]);
+    if (connectResult.status === 'rejected') {
       deleteQueue(msg.guild.id);
       return replyMsg.edit(t(g, 'music_no_voice_connect'));
     }

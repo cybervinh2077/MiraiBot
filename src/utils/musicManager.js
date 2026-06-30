@@ -472,8 +472,9 @@ async function getAudioUrl(songUrl) {
       format: 'bestaudio[ext=webm]/bestaudio[ext=m4a]/bestaudio/best',
       noCheckCertificates: true,
       noWarnings: true,
-      skipDownload: true, // Chỉ lấy metadata, không download
-      socketTimeout: 10, // Timeout 10s thay vì mặc định 30s
+      skipDownload: true,
+      socketTimeout: 10,
+      noCheckFormats: true, // bỏ qua HTTP HEAD check từng format, tiết kiệm ~300ms
     });
   } catch (e) {
     // execa throw khi exitCode != 0, nhưng stdout vẫn có thể có data
@@ -539,8 +540,8 @@ async function playSong(queue, song) {
     const nextVideoId = extractVideoId(nextSong.url);
     if (nextVideoId && !getCachedAudioUrl(nextVideoId)) {
       setTimeout(() => {
-        getAudioUrl(nextSong.url).catch(() => {}); // Prefetch, ignore errors
-      }, 2000); // Delay 2s để không tranh bandwidth với bài hiện tại
+        getAudioUrl(nextSong.url).catch(() => {});
+      }, 500); // Giảm từ 2000ms → 500ms: ffmpeg đã chiếm stream, yt-dlp metadata chỉ cần HTTP
     }
   }
 
@@ -677,4 +678,4 @@ async function connect(queue) {
   });
 }
 
-module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, getVideoDetails, getVideosByIds, getPlaylistItems, extractPlaylistId, extractVideoId, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl, refillAutoplay, AUDIO_FILTERS };
+module.exports = { getQueue, createQueue, deleteQueue, playSong, playNext, connect, searchYoutube, searchYoutubeList, getVideoById, getVideoDetails, getVideosByIds, getPlaylistItems, extractPlaylistId, extractVideoId, clearIdleTimer, formatDuration, buildPlayerUI, getCachedAudioUrl, getAudioUrl, refillAutoplay, AUDIO_FILTERS };
