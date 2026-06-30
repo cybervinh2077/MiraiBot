@@ -67,7 +67,8 @@ const FILTER_GROUP_1 = ['default','nightcore_gaming','nightcore_crush','nightcor
 const FILTER_GROUP_2 = ['radio_paris_90s','blazing_dubai','8d_music','pop_music','soft_music','tremolo_music','rock_music','saturday_night','overkilled_bass','sky_high','problem_child','deathdealing_deaf','lurking_shadows','satan_billboard','zombieland_saga','karaoke'];
 
 const queues = new Map();
-const audioUrlCache = new Map(); // Cache audio URL để tránh gọi yt-dlp lại
+const audioUrlCache = new Map();
+const pendingFetches = new Map(); // dedup: cùng videoId chỉ spawn 1 yt-dlp dù gọi nhiều lần
 
 function getCachedAudioUrl(videoId) {
   const cached = audioUrlCache.get(videoId);
@@ -453,7 +454,6 @@ function buildPlayerUI(queue) {
 }
 
 async function getAudioUrl(songUrl) {
-  // Kiểm tra cache trước (chỉ cache YouTube)
   const videoId = extractVideoId(songUrl);
   if (videoId) {
     const cached = getCachedAudioUrl(videoId);
@@ -461,8 +461,22 @@ async function getAudioUrl(songUrl) {
       console.log(`⚡ Audio URL from cache for ${videoId}`);
       return cached;
     }
+    // Dedup: nếu đang fetch cùng videoId thì dùng chung promise, không spawn thêm yt-dlp
+    if (pendingFetches.has(videoId)) {
+      console.log(`⏳ Reusing in-flight fetch for ${videoId}`);
+      return pendingFetches.get(videoId);
+    }
   }
 
+  const fetchPromise = _fetchAudioUrl(songUrl, videoId);
+  if (videoId) {
+    pendingFetches.set(videoId, fetchPromise);
+    fetchPromise.finally(() => pendingFetches.delete(videoId));
+  }
+  return fetchPromise;
+}
+
+async function _fetchAudioUrl(songUrl, videoId) {
   const startTime = Date.now();
   let result;
   try {
@@ -474,20 +488,17 @@ async function getAudioUrl(songUrl) {
       noWarnings: true,
       skipDownload: true,
       socketTimeout: 10,
-      noCheckFormats: true, // bỏ qua HTTP HEAD check từng format, tiết kiệm ~300ms
+      noCheckFormats: true,
     });
   } catch (e) {
-    // execa throw khi exitCode != 0, nhưng stdout vẫn có thể có data
     result = e;
   }
 
-  // result có thể là execa object với stdout chứa JSON
   let info = result;
   if (result && typeof result === 'object' && 'stdout' in result) {
     try {
       info = JSON.parse(result.stdout);
     } catch {
-      // stdout không phải JSON, log stderr để debug
       console.error('yt-dlp stderr:', (result.stderr || '').slice(0, 300));
       throw new Error('yt-dlp failed: ' + (result.stderr || result.all || '').slice(0, 200));
     }
@@ -495,8 +506,7 @@ async function getAudioUrl(songUrl) {
 
   if (info && typeof info === 'object') {
     if (info.url) {
-      const elapsed = Date.now() - startTime;
-      console.log(`⏱️ yt-dlp extracted URL in ${elapsed}ms`);
+      console.log(`⏱️ yt-dlp extracted URL in ${Date.now() - startTime}ms`);
       if (videoId) setCachedAudioUrl(videoId, info.url);
       return info.url;
     }
@@ -507,16 +517,14 @@ async function getAudioUrl(songUrl) {
         .sort((a, b) => (b.abr || 0) - (a.abr || 0));
 
       if (audioFmts.length) {
-        const elapsed = Date.now() - startTime;
-        console.log(`⏱️ yt-dlp extracted URL from formats in ${elapsed}ms (abr: ${audioFmts[0].abr})`);
+        console.log(`⏱️ yt-dlp extracted URL from formats in ${Date.now() - startTime}ms (abr: ${audioFmts[0].abr})`);
         if (videoId) setCachedAudioUrl(videoId, audioFmts[0].url);
         return audioFmts[0].url;
       }
 
       const anyFmt = info.formats.slice().reverse().find(f => f.url);
       if (anyFmt) {
-        const elapsed = Date.now() - startTime;
-        console.log(`⏱️ yt-dlp extracted URL (fallback) in ${elapsed}ms`);
+        console.log(`⏱️ yt-dlp extracted URL (fallback) in ${Date.now() - startTime}ms`);
         if (videoId) setCachedAudioUrl(videoId, anyFmt.url);
         return anyFmt.url;
       }

@@ -125,6 +125,12 @@ async function cmdPlay(msg, args, voiceChannel) {
   const row = new ActionRowBuilder().addComponents(select);
   await searching.edit({ content: null, embeds: [embed], components: [row] });
 
+  // Prefetch top 3 kết quả ngay khi dropdown hiện — user mất vài giây để chọn,
+  // dedup trong getAudioUrl đảm bảo không spawn yt-dlp trùng khi user click
+  for (const r of results.slice(0, 3)) {
+    getAudioUrl(`https://www.youtube.com/watch?v=${r.videoId}`).catch(() => {});
+  }
+
   const collector = searching.createMessageComponentCollector({
     filter: i => i.customId === `music_select_${msg.author.id}` && i.user.id === msg.author.id,
     time: 30_000, max: 1,
@@ -135,7 +141,7 @@ async function cmdPlay(msg, args, voiceChannel) {
     const [videoId, idx] = interaction.values[0].split('|');
     await searching.edit({ content: t(g, 'music_loading', { title: results[parseInt(idx)].title }), embeds: [], components: [] });
 
-    // Bắt đầu prefetch audio URL ngay khi user chọn bài, chạy song song với getVideoById + connect
+    // Nếu chưa có trong cache/pending thì prefetch thêm (cho kết quả ngoài top 3)
     getAudioUrl(`https://www.youtube.com/watch?v=${videoId}`).catch(() => {});
 
     let song = await getVideoById(videoId).catch((e) => { console.error('getVideoById error:', e.message); return null; });
